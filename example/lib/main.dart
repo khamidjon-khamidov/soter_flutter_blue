@@ -1,7 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:soter_flutter_blue/fake_windows_soter_blue.dart';
+import 'package:soter_flutter_blue/windows_lib/models.dart';
+import 'package:soter_flutter_blue_example/peripheral_detail_page.dart';
 
 void main() {
   runApp(const MyApp());
@@ -11,38 +13,30 @@ class MyApp extends StatefulWidget {
   const MyApp({Key? key}) : super(key: key);
 
   @override
-  State<MyApp> createState() => _MyAppState();
+  _MyAppState createState() => _MyAppState();
 }
 
 class _MyAppState extends State<MyApp> {
-  String _platformVersion = 'Unknown';
+  StreamSubscription<BlueScanResult?>? _subscription;
+
+  final List<BlueScanResult> _scanResults = [];
 
   @override
   void initState() {
     super.initState();
-    initPlatformState();
+    _subscription =
+        FakeWindowsSoterBlue.instance.scanResultStream.listen((result) {
+      if (!_scanResults.any((r) => r.deviceId == result.deviceId)) {
+        print('khamidjon: result: $result');
+        setState(() => _scanResults.add(result));
+      }
+    });
   }
 
-  // Platform messages are asynchronous, so we initialize in an async method.
-  Future<void> initPlatformState() async {
-    String platformVersion;
-    // Platform messages may fail, so we use a try/catch PlatformException.
-    // We also handle the message potentially returning null.
-    try {
-      platformVersion = '';
-      // await SoterFlutterBlue.platformVersion ?? 'Unknown platform version';
-    } on PlatformException {
-      platformVersion = 'Failed to get platform version.';
-    }
-
-    // If the widget was removed from the tree while the asynchronous platform
-    // message was in flight, we want to discard the reply rather than calling
-    // setState to update our non-existent appearance.
-    if (!mounted) return;
-
-    setState(() {
-      _platformVersion = platformVersion;
-    });
+  @override
+  void dispose() {
+    super.dispose();
+    _subscription?.cancel();
   }
 
   @override
@@ -52,9 +46,65 @@ class _MyAppState extends State<MyApp> {
         appBar: AppBar(
           title: const Text('Plugin example app'),
         ),
-        body: Center(
-          child: Text('Running on: $_platformVersion\n'),
+        body: // const Text('hello')
+            Column(
+          children: [
+            FutureBuilder(
+              future: FakeWindowsSoterBlue.instance.isBluetoothAvailable(),
+              builder: (context, snapshot) {
+                var available = snapshot.data?.toString() ?? '...';
+                return Text('Bluetooth init: $available');
+              },
+            ),
+            _buildButtons(),
+            const Divider(
+              color: Colors.blue,
+            ),
+            _buildListView(),
+          ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildButtons() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: <Widget>[
+        ElevatedButton(
+          child: const Text('startScan'),
+          onPressed: () {
+            FakeWindowsSoterBlue.instance.startScan();
+          },
+        ),
+        ElevatedButton(
+          child: const Text('stopScan'),
+          onPressed: () {
+            FakeWindowsSoterBlue.instance.stopScan();
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildListView() {
+    return Expanded(
+      child: ListView.separated(
+        itemBuilder: (context, index) => ListTile(
+          title: Text(
+              '${_scanResults[index].name}(${_scanResults[index].rssi})\n${_scanResults[index].manufacturerData.toString()}'),
+          subtitle: Text(_scanResults[index].deviceId),
+          onTap: () {
+            Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) =>
+                      PeripheralDetailPage(_scanResults[index].deviceId),
+                ));
+          },
+        ),
+        separatorBuilder: (context, index) => const Divider(),
+        itemCount: _scanResults.length,
       ),
     );
   }

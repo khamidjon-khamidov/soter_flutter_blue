@@ -6,6 +6,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_blue/flutter_blue.dart';
 import 'package:rxdart/rxdart.dart';
 
+const PLUGIN_NAME = 'soter_flutter_blue';
+
 abstract class SoterFlutterBlue {
   static final SoterFlutterBlue _instance =
       Platform.isWindows ? _FlutterBlueWindows() : _FlutterBlueIOSAndroid();
@@ -49,8 +51,12 @@ abstract class SoterFlutterBlue {
 }
 
 class _FlutterBlueWindows extends SoterFlutterBlue {
-  static const MethodChannel _channel = MethodChannel('$NAMESPACE/methods');
-  static const EventChannel _eventChannel = EventChannel('$NAMESPACE/state');
+  static const MethodChannel _channel = MethodChannel('$PLUGIN_NAME/method');
+  static const EventChannel _eventChannel =
+      EventChannel('$PLUGIN_NAME/event.scanResult');
+  static const _messageConnector = BasicMessageChannel(
+      '$PLUGIN_NAME/message.connector', StandardMessageCodec());
+
   final StreamController<MethodCall> _methodStreamController =
       StreamController.broadcast(); // ignore: close_sinks
   Stream<MethodCall> get _methodStream => _methodStreamController
@@ -244,28 +250,3 @@ class _FlutterBlueIOSAndroid extends SoterFlutterBlue {
   @override
   void setLogLevel(LogLevel level) => FlutterBlue.instance.setLogLevel(level);
 }
-
-///
-///
-///
-///
-///
-///
-///
-///
-///
-///
-///
-///
-///
-///
-///
-///
-///
-///
-///
-///
-///
-///
-///
-///
