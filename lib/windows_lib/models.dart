@@ -6,9 +6,15 @@ class BlueScanResult {
   Uint8List manufacturerData;
   int rssi;
 
+  static final RegExp _numeric = RegExp(r'^-?[0-9]+$');
+
   BlueScanResult.fromMap(map)
       : name = map['name'],
-        deviceId = map['deviceId'],
+        deviceId = _numeric.hasMatch(map['deviceId'].toString()) &&
+                !map['deviceId'].toString().contains(":")
+            ? _createMacAddress(
+                BigInt.parse(map['deviceId'], radix: 10).toRadixString(16))
+            : map['deviceId'],
         manufacturerData = map['manufacturerData'],
         rssi = map['rssi'];
 
@@ -18,6 +24,19 @@ class BlueScanResult {
         'manufacturerData': manufacturerData,
         'rssi': rssi,
       };
+
+  static String _createMacAddress(String hexNum) {
+    String temp = hexNum.toString();
+    String result = temp.substring(0, 2);
+    temp = temp.substring(2);
+
+    do {
+      result += (':' + temp.substring(0, 2));
+      temp = temp.substring(2);
+    } while (temp.isNotEmpty);
+
+    return result;
+  }
 }
 
 class BlueConnectionState {

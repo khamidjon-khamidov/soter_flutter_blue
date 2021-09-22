@@ -5,6 +5,9 @@ import 'dart:typed_data';
 import 'package:flutter/services.dart';
 import 'package:flutter_blue/flutter_blue.dart';
 import 'package:rxdart/rxdart.dart';
+import 'package:soter_flutter_blue/windows_lib/models.dart';
+
+import 'fake_windows_soter_blue.dart';
 
 const PLUGIN_NAME = 'soter_flutter_blue';
 
@@ -48,14 +51,23 @@ abstract class SoterFlutterBlue {
   Future<bool?> stopAdvertising();
 
   void setLogLevel(LogLevel level);
+
+  void setValueHandler(OnValueChanged? onValueChanged);
+
+  void setServiceHandler(OnServiceDiscovered? onServiceDiscovered);
+
+  void setConnectionHandler(OnConnectionChanged? onConnectionChanged);
 }
 
 class _FlutterBlueWindows extends SoterFlutterBlue {
-  static const MethodChannel _channel = MethodChannel('$PLUGIN_NAME/method');
-  static const EventChannel _eventChannel =
-      EventChannel('$PLUGIN_NAME/event.scanResult');
+  static const MethodChannel _method = MethodChannel('$PLUGIN_NAME/method');
+  static const _eventScanResult = EventChannel('$PLUGIN_NAME/event.scanResult');
   static const _messageConnector = BasicMessageChannel(
       '$PLUGIN_NAME/message.connector', StandardMessageCodec());
+
+  OnConnectionChanged? onConnectionChanged;
+  OnServiceDiscovered? onServiceDiscovered;
+  OnValueChanged? onValueChanged;
 
   final StreamController<MethodCall> _methodStreamController =
       StreamController.broadcast(); // ignore: close_sinks
@@ -63,10 +75,11 @@ class _FlutterBlueWindows extends SoterFlutterBlue {
       .stream; // Used internally to dispatch methods from platform.
 
   _FlutterBlueWindows() {
-    _channel.setMethodCallHandler((MethodCall call) async {
+    _method.setMethodCallHandler((MethodCall call) async {
       _methodStreamController.add(call);
     });
 
+    _messageConnector.setMessageHandler(_handleConnectorMessage);
     _setLogLevelIfAvailable();
   }
 
@@ -92,33 +105,16 @@ class _FlutterBlueWindows extends SoterFlutterBlue {
     }
   }
 
+  /// todo implement this method properly later
   @override
-  Stream<bool> get isScanning {
-    // todo implement
-    return _isScanning.stream;
-  }
+  Future<bool> get isAvailable async => Future.value(true);
 
+  /// todo this method is used in soter_ble
   @override
-  // TODO: implement connectedDevices
-  Future<List<BluetoothDevice>> get connectedDevices {
-    // todo implement
-    return Future.value([]);
-  }
+  Future<bool> get isOn async =>
+      (await _method.invokeMethod('isBluetoothAvailable') ?? false);
 
-  @override
-  // TODO: implement isAvailable
-  Future<bool> get isAvailable {
-    // todo implement
-    return Future.value(false);
-  }
-
-  @override
-  // TODO: implement isOn
-  Future<bool> get isOn {
-    // todo implement
-    return Future.value(false);
-  }
-
+  /// todo this method is used in soter_ble
   @override
   Stream<ScanResult> scan(
       {ScanMode scanMode = ScanMode.lowLatency,
@@ -130,6 +126,7 @@ class _FlutterBlueWindows extends SoterFlutterBlue {
     return const Stream.empty();
   }
 
+  /// todo this method is used in soter_ble
   @override
   // TODO: implement scanResults
   Stream<List<ScanResult>> get scanResults {
@@ -137,12 +134,14 @@ class _FlutterBlueWindows extends SoterFlutterBlue {
     return const Stream.empty();
   }
 
+  /// todo this method is used in soter_ble
   @override
   Future<bool?> startAdvertising(Uint8List manufacturerData) {
     // todo implement
     return Future.value(false);
   }
 
+  /// todo this method is used in soter_ble
   @override
   Future startScan(
       {ScanMode scanMode = ScanMode.lowLatency,
@@ -154,6 +153,7 @@ class _FlutterBlueWindows extends SoterFlutterBlue {
     return Future.value();
   }
 
+  /// todo this method is used in soter_ble
   @override
   // TODO: implement state
   Stream<BluetoothState> get state {
@@ -161,12 +161,14 @@ class _FlutterBlueWindows extends SoterFlutterBlue {
     return const Stream.empty();
   }
 
+  /// todo this method is used in soter_ble
   @override
   Future<bool?> stopAdvertising() {
     // todo implement
     return Future.value(false);
   }
 
+  /// todo this method is used in soter_ble
   @override
   Future stopScan() {
     // todo implement
@@ -180,6 +182,68 @@ class _FlutterBlueWindows extends SoterFlutterBlue {
 
   @override
   LogLevel get logLevel => _logLevel;
+
+  @override
+  void setConnectionHandler(OnConnectionChanged? onConnectionChanged) {
+    this.onConnectionChanged = onConnectionChanged;
+  }
+
+  @override
+  void setServiceHandler(OnServiceDiscovered? onServiceDiscovered) {
+    this.onServiceDiscovered = onServiceDiscovered;
+  }
+
+  @override
+  void setValueHandler(OnValueChanged? onValueChanged) {
+    this.onValueChanged = onValueChanged;
+  }
+
+  // FIXME Close
+  final _mtuConfigController = StreamController<int>.broadcast();
+
+  Future<void> _handleConnectorMessage(dynamic message) {
+    print('_handleConnectorMessage $message');
+    if (message['ConnectionState'] != null) {
+      String deviceId = message['deviceId'];
+      BlueConnectionState connectionState =
+          BlueConnectionState.parse(message['ConnectionState']);
+      onConnectionChanged?.call(deviceId, connectionState);
+    } else if (message['ServiceState'] != null) {
+      if (message['ServiceState'] == 'discovered') {
+        String deviceId = message['deviceId'];
+        List<dynamic> services = message['services'];
+        for (var s in services) {
+          onServiceDiscovered?.call(deviceId, s);
+        }
+      }
+    } else if (message['characteristicValue'] != null) {
+      String deviceId = message['deviceId'];
+      var characteristicValue = message['characteristicValue'];
+      String characteristic = characteristicValue['characteristic'];
+      Uint8List value = Uint8List.fromList(
+          characteristicValue['value']); // In case of _Uint8ArrayView
+      onValueChanged?.call(deviceId, characteristic, value);
+    } else if (message['mtuConfig'] != null) {
+      _mtuConfigController.add(message['mtuConfig']);
+    }
+
+    return Future.value();
+  }
+
+  /// not used in soter_ble
+  @override
+  Stream<bool> get isScanning {
+    // todo implement
+    return _isScanning.stream;
+  }
+
+  /// not used in soter_ble
+  @override
+  // TODO: implement connectedDevices
+  Future<List<BluetoothDevice>> get connectedDevices {
+    // todo implement
+    return Future.value([]);
+  }
 }
 
 class _FlutterBlueIOSAndroid extends SoterFlutterBlue {
@@ -249,4 +313,19 @@ class _FlutterBlueIOSAndroid extends SoterFlutterBlue {
 
   @override
   void setLogLevel(LogLevel level) => FlutterBlue.instance.setLogLevel(level);
+
+  @override
+  void setConnectionHandler(OnConnectionChanged? onConnectionChanged) {
+    // TODO: unnecessary method, find other way to remove it
+  }
+
+  @override
+  void setServiceHandler(OnServiceDiscovered? onServiceDiscovered) {
+    // TODO: unnecessary method, find other way to remove it
+  }
+
+  @override
+  void setValueHandler(OnValueChanged? onValueChanged) {
+    // TODO: unnecessary method, find other way to remove it
+  }
 }
