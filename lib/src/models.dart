@@ -1,17 +1,72 @@
-import 'dart:typed_data';
-
-import 'package:flutter_blue/flutter_blue.dart';
+part of soter_flutter_blue;
 
 class SoterBluetoothDevice {
   final String name;
   final String deviceId;
+  final BluetoothDevice? _flutterBlueDevice;
 
-  SoterBluetoothDevice(this.name, this.deviceId);
+  SoterBluetoothDevice(this.name, this.deviceId, this._flutterBlueDevice);
 
   SoterBluetoothDevice.fromScanResult(SoterBlueScanResult scanResult)
-      : name=scanResult.name,
-        deviceId=scanResult.deviceId;
+      : name = scanResult.name,
+        deviceId = scanResult.deviceId,
+        _flutterBlueDevice = scanResult._flutterBlueDevice;
 
+  /// Establishes a connection to the Bluetooth Device.
+  Future<void> connect({
+    Duration? timeout,
+    bool autoConnect = true,
+  }) async {
+    if (!Platform.isWindows && _flutterBlueDevice != null) {
+      return _flutterBlueDevice?.connect(
+          timeout: timeout, autoConnect: autoConnect);
+    }
+
+    if (Platform.isWindows) {
+      Timer? timer;
+      if (timeout != null) {
+        timer = Timer(timeout, () {
+          disconnect();
+          throw TimeoutException('Failed to connect in time.', timeout);
+        });
+      }
+
+      await _FlutterBlueWindows._method.invokeMethod('connect', {
+        'deviceId': deviceId,
+      });
+      print('connect invokeMethod success');
+
+      timer?.cancel();
+
+      return;
+    }
+
+    throw Exception('Couldn\'t make connection');
+  }
+
+  /// Cancels connection to the Bluetooth Device
+  Future disconnect() async {
+    if (!Platform.isWindows) {
+      return _flutterBlueDevice?.disconnect();
+    }
+
+    if (Platform.isWindows) {
+      return _FlutterBlueWindows._method.invokeMethod('disconnect', {
+        'deviceId': deviceId,
+      });
+    }
+  }
+
+  /// The MTU size in bytes
+  Stream<int> get mtu async* {
+    if (!Platform.isWindows) {
+      yield* _flutterBlueDevice?.mtu ?? const Stream.empty();
+    }
+
+    if (Platform.isWindows) {}
+    yield await (SoterFlutterBlue.instance as _FlutterBlueWindows)
+        .requestMtu(deviceId, _FlutterBlueWindows.DEFAULT_MTU);
+  }
 }
 
 class SoterBlueScanResult {
@@ -19,19 +74,22 @@ class SoterBlueScanResult {
   final String deviceId;
   final List<int> manufacturerData;
   final int rssi;
+  final BluetoothDevice? _flutterBlueDevice;
 
   SoterBlueScanResult.fromFlutterBlue(ScanResult result)
       : name = result.advertisementData.localName,
         deviceId = result.device.id.id,
         manufacturerData =
             result.advertisementData.manufacturerData.values.first,
-        rssi = result.rssi;
+        rssi = result.rssi,
+        _flutterBlueDevice = result.device;
 
   SoterBlueScanResult.fromQuickBlueScanResult(BlueScanResult result)
       : name = result.name,
         deviceId = result.deviceId,
         manufacturerData = result.manufacturerData.toList(),
-        rssi = result.rssi;
+        rssi = result.rssi,
+        _flutterBlueDevice = null;
 
   @override
   bool operator ==(Object other) =>
