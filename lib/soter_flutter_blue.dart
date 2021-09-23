@@ -25,13 +25,13 @@ abstract class SoterFlutterBlue {
 
   Stream<bool> get isScanning;
 
-  Stream<List<ScanResult>> get scanResults;
+  Stream<List<SoterBlueScanResult>> get scanResults;
 
   Stream<BluetoothState> get state;
 
   Future<List<BluetoothDevice>> get connectedDevices;
 
-  Stream<ScanResult> scan({
+  Stream<SoterBlueScanResult> scan({
     ScanMode scanMode = ScanMode.lowLatency,
     List<Guid> withServices = const [],
     List<Guid> withDevices = const [],
@@ -87,8 +87,11 @@ class _FlutterBlueWindows extends SoterFlutterBlue {
 
   final BehaviorSubject<bool> _isScanning = BehaviorSubject.seeded(false);
 
-  final BehaviorSubject<List<ScanResult>> _scanResults =
+  final BehaviorSubject<List<SoterBlueScanResult>> _scanResults =
       BehaviorSubject.seeded([]);
+
+  @override
+  Stream<List<SoterBlueScanResult>> get scanResults => _scanResults.stream;
 
   final PublishSubject _stopScanPill = PublishSubject();
 
@@ -105,33 +108,83 @@ class _FlutterBlueWindows extends SoterFlutterBlue {
     }
   }
 
+  @override
+  LogLevel get logLevel => _logLevel;
+
   /// todo implement this method properly later
   @override
   Future<bool> get isAvailable async => Future.value(true);
 
-  /// todo this method is used in soter_ble
   @override
   Future<bool> get isOn async =>
       (await _method.invokeMethod('isBluetoothAvailable') ?? false);
 
-  /// todo this method is used in soter_ble
   @override
-  Stream<ScanResult> scan(
+  Stream<SoterBlueScanResult> scan(
       {ScanMode scanMode = ScanMode.lowLatency,
       List<Guid> withServices = const [],
       List<Guid> withDevices = const [],
       Duration? timeout,
-      bool allowDuplicates = false}) {
-    // todo implement
-    return const Stream.empty();
+      bool allowDuplicates = false}) async* {
+    if (_isScanning.value == true) {
+      throw Exception('Another scan is already in progress.');
+    }
+
+    // Emit to isScanning
+    _isScanning.add(true);
+
+    final killStreams = <Stream>[];
+    killStreams.add(_stopScanPill);
+    if (timeout != null) {
+      killStreams.add(Rx.timer(null, timeout));
+    }
+
+    // Clear scan results list
+    _scanResults.add(<SoterBlueScanResult>[]);
+
+    try {
+      _method
+          .invokeMethod('startScan')
+          .then((_) => print('startScan invokeMethod success'));
+    } catch (e) {
+      print('Error starting scan.');
+      _stopScanPill.add(null);
+      _isScanning.add(false);
+      throw e;
+    }
+
+    yield* _eventScanResult
+        .receiveBroadcastStream({'name': 'scanResult'})
+        .map((item) => BlueScanResult.fromMap(item))
+        .map((p) {
+          final result = SoterBlueScanResult.fromQuickBlueScanResult(p);
+          final list = _scanResults.value ?? [];
+          int index = list.indexOf(result);
+          if (index != -1) {
+            list[index] = result;
+          } else {
+            list.add(result);
+          }
+          _scanResults.add(list);
+          return result;
+        });
   }
 
-  /// todo this method is used in soter_ble
   @override
-  // TODO: implement scanResults
-  Stream<List<ScanResult>> get scanResults {
-    // todo implement
-    return const Stream.empty();
+  Future startScan(
+      {ScanMode scanMode = ScanMode.lowLatency,
+      List<Guid> withServices = const [],
+      List<Guid> withDevices = const [],
+      Duration? timeout,
+      bool allowDuplicates = false}) async {
+    await scan(
+            scanMode: scanMode,
+            withServices: withServices,
+            withDevices: withDevices,
+            timeout: timeout,
+            allowDuplicates: allowDuplicates)
+        .drain();
+    return _scanResults.value;
   }
 
   /// todo this method is used in soter_ble
@@ -139,18 +192,6 @@ class _FlutterBlueWindows extends SoterFlutterBlue {
   Future<bool?> startAdvertising(Uint8List manufacturerData) {
     // todo implement
     return Future.value(false);
-  }
-
-  /// todo this method is used in soter_ble
-  @override
-  Future startScan(
-      {ScanMode scanMode = ScanMode.lowLatency,
-      List<Guid> withServices = const [],
-      List<Guid> withDevices = const [],
-      Duration? timeout,
-      bool allowDuplicates = false}) {
-    // todo implement
-    return Future.value();
   }
 
   /// todo this method is used in soter_ble
@@ -168,20 +209,18 @@ class _FlutterBlueWindows extends SoterFlutterBlue {
     return Future.value(false);
   }
 
-  /// todo this method is used in soter_ble
   @override
-  Future stopScan() {
-    // todo implement
-    return Future.value(false);
+  Future stopScan() async {
+    await _method.invokeMethod('stopScan');
+    print('stopScan invokeMethod success');
+    _stopScanPill.add(null);
+    _isScanning.add(false);
   }
 
   @override
   void setLogLevel(LogLevel level) {
     // todo implement
   }
-
-  @override
-  LogLevel get logLevel => _logLevel;
 
   @override
   void setConnectionHandler(OnConnectionChanged? onConnectionChanged) {
@@ -260,7 +299,10 @@ class _FlutterBlueIOSAndroid extends SoterFlutterBlue {
   Stream<bool> get isScanning => FlutterBlue.instance.isScanning;
 
   @override
-  Stream<List<ScanResult>> get scanResults => FlutterBlue.instance.scanResults;
+  Stream<List<SoterBlueScanResult>> get scanResults =>
+      FlutterBlue.instance.scanResults.map((List<ScanResult> results) => results
+          .map((result) => SoterBlueScanResult.fromFlutterBlue(result))
+          .toList());
 
   @override
   Stream<BluetoothState> get state => FlutterBlue.instance.state;
@@ -270,20 +312,22 @@ class _FlutterBlueIOSAndroid extends SoterFlutterBlue {
       FlutterBlue.instance.connectedDevices;
 
   @override
-  Stream<ScanResult> scan({
+  Stream<SoterBlueScanResult> scan({
     ScanMode scanMode = ScanMode.lowLatency,
     List<Guid> withServices = const [],
     List<Guid> withDevices = const [],
     Duration? timeout,
     bool allowDuplicates = false,
   }) =>
-      FlutterBlue.instance.scan(
-        scanMode: scanMode,
-        withServices: withServices,
-        withDevices: withDevices,
-        timeout: timeout,
-        allowDuplicates: allowDuplicates,
-      );
+      FlutterBlue.instance
+          .scan(
+            scanMode: scanMode,
+            withServices: withServices,
+            withDevices: withDevices,
+            timeout: timeout,
+            allowDuplicates: allowDuplicates,
+          )
+          .map((result) => SoterBlueScanResult.fromFlutterBlue(result));
 
   @override
   Future startScan({

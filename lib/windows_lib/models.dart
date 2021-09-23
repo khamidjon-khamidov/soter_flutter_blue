@@ -1,5 +1,42 @@
 import 'dart:typed_data';
 
+import 'package:flutter_blue/flutter_blue.dart';
+
+class SoterBlueScanResult {
+  final String name;
+  final String deviceId;
+  final List<int> manufacturerData;
+  final int rssi;
+
+  SoterBlueScanResult.fromFlutterBlue(ScanResult result)
+      : name = result.advertisementData.localName,
+        deviceId = result.device.id.id,
+        manufacturerData =
+            result.advertisementData.manufacturerData.values.first,
+        rssi = result.rssi;
+
+  SoterBlueScanResult.fromQuickBlueScanResult(BlueScanResult result)
+      : name = result.name,
+        deviceId = result.deviceId,
+        manufacturerData = result.manufacturerData.toList(),
+        rssi = result.rssi;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is SoterBlueScanResult &&
+          runtimeType == other.runtimeType &&
+          deviceId == other.deviceId;
+
+  @override
+  String toString() {
+    return 'SoterBlueScanResult{name: $name, deviceId: $deviceId, manufacturerData: $manufacturerData, rssi: $rssi}';
+  }
+
+  @override
+  int get hashCode => deviceId.hashCode;
+}
+
 class BlueScanResult {
   String name;
   String deviceId;
