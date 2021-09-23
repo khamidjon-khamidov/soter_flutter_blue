@@ -186,8 +186,7 @@ class _FlutterBlueWindows extends SoterFlutterBlue {
     this.onValueChanged = onValueChanged;
   }
 
-  // FIXME Close
-  final _mtuConfigController = StreamController<int>.broadcast();
+  final PublishSubject _mtuConfigController = PublishSubject<int>();
 
   Future<int> requestMtu(String deviceId, int expectedMtu) async {
     _method.invokeMethod('requestMtu', {
@@ -226,14 +225,14 @@ class _FlutterBlueWindows extends SoterFlutterBlue {
     return Future.value();
   }
 
-  /// not used in soter_ble
+  ////////////////////////////////////////////////////////////////
+
   @override
   Stream<bool> get isScanning {
     // todo implement
     return _isScanning.stream;
   }
 
-  /// not used in soter_ble
   @override
   // TODO: implement connectedDevices
   Future<List<BluetoothDevice>> get connectedDevices {
