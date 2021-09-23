@@ -7,6 +7,11 @@ class SoterBluetoothDevice {
   final String deviceId;
 
   SoterBluetoothDevice(this.name, this.deviceId);
+
+  SoterBluetoothDevice.fromScanResult(SoterBlueScanResult scanResult)
+      : name=scanResult.name,
+        deviceId=scanResult.deviceId;
+
 }
 
 class SoterBlueScanResult {
