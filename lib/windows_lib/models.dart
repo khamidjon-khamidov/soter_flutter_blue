@@ -2,6 +2,13 @@ import 'dart:typed_data';
 
 import 'package:flutter_blue/flutter_blue.dart';
 
+class SoterBluetoothDevice {
+  final String name;
+  final String deviceId;
+
+  SoterBluetoothDevice(this.name, this.deviceId);
+}
+
 class SoterBlueScanResult {
   final String name;
   final String deviceId;
