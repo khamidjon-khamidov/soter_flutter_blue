@@ -100,9 +100,9 @@ class SoterBlueScanResult {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is SoterBlueScanResult &&
-          runtimeType == other.runtimeType &&
-          deviceId == other.deviceId;
+          other is SoterBlueScanResult &&
+              runtimeType == other.runtimeType &&
+              deviceId == other.deviceId;
 
   @override
   String toString() {
@@ -115,41 +115,44 @@ class SoterBlueScanResult {
 
 class BlueScanResult {
   String name;
-  String deviceId;
+  String _deviceId;
   Uint8List manufacturerData;
   int rssi;
 
   static final RegExp _numeric = RegExp(r'^-?[0-9]+$');
 
+  String get deviceId {
+    if(_deviceId.contains(':') || _numeric.hasMatch(_deviceId)){
+      return _deviceId;
+    }
+    print('_createMacAddress: _deviceId: $_deviceId');
+    String temp = BigInt.parse(_deviceId, radix: 10).toRadixString(16);
+    String result = temp.substring(0, 2);
+    temp = temp.substring(2);
+
+
+    while(temp.isNotEmpty) {
+      result += (':' + temp.substring(0, 2));
+      temp = temp.substring(2);
+    }
+
+    print('_createMacAddress: mac: $result');
+    return result;
+  }
+
   BlueScanResult.fromMap(map)
       : name = map['name'],
-        deviceId = _numeric.hasMatch(map['deviceId'].toString()) &&
-                !map['deviceId'].toString().contains(":")
-            ? _createMacAddress(
-                BigInt.parse(map['deviceId'], radix: 10).toRadixString(16))
-            : map['deviceId'],
+        _deviceId = map['deviceId'],
         manufacturerData = map['manufacturerData'],
         rssi = map['rssi'];
 
   Map toMap() => {
-        'name': name,
-        'deviceId': deviceId,
-        'manufacturerData': manufacturerData,
-        'rssi': rssi,
-      };
+    'name': name,
+    'deviceId': deviceId,
+    'manufacturerData': manufacturerData,
+    'rssi': rssi,
+  };
 
-  static String _createMacAddress(String hexNum) {
-    String temp = hexNum.toString();
-    String result = temp.substring(0, 2);
-    temp = temp.substring(2);
-
-    do {
-      result += (':' + temp.substring(0, 2));
-      temp = temp.substring(2);
-    } while (temp.isNotEmpty);
-
-    return result.toUpperCase();
-  }
 }
 
 class BlueConnectionState {
