@@ -93,16 +93,16 @@ class SoterBlueScanResult {
   SoterBlueScanResult.fromQuickBlueScanResult(BlueScanResult result)
       : name = result.name,
         deviceId = result.deviceId,
-        manufacturerData = result.manufacturerData.toList(),
+        manufacturerData = result.manufacturerData.toList().sublist(2),
         rssi = result.rssi,
         _flutterBlueDevice = null;
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-          other is SoterBlueScanResult &&
-              runtimeType == other.runtimeType &&
-              deviceId == other.deviceId;
+      other is SoterBlueScanResult &&
+          runtimeType == other.runtimeType &&
+          deviceId == other.deviceId;
 
   @override
   String toString() {
@@ -122,7 +122,7 @@ class BlueScanResult {
   static final RegExp _numeric = RegExp(r'^-?[0-9]+$');
 
   String get deviceId {
-    if(_deviceId.contains(':') || _numeric.hasMatch(_deviceId)){
+    if (_deviceId.contains(':') || _numeric.hasMatch(_deviceId)) {
       return _deviceId;
     }
     print('_createMacAddress: _deviceId: $_deviceId');
@@ -130,8 +130,7 @@ class BlueScanResult {
     String result = temp.substring(0, 2);
     temp = temp.substring(2);
 
-
-    while(temp.isNotEmpty) {
+    while (temp.isNotEmpty) {
       result += (':' + temp.substring(0, 2));
       temp = temp.substring(2);
     }
@@ -147,12 +146,11 @@ class BlueScanResult {
         rssi = map['rssi'];
 
   Map toMap() => {
-    'name': name,
-    'deviceId': deviceId,
-    'manufacturerData': manufacturerData,
-    'rssi': rssi,
-  };
-
+        'name': name,
+        'deviceId': deviceId,
+        'manufacturerData': manufacturerData,
+        'rssi': rssi,
+      };
 }
 
 class BlueConnectionState {
