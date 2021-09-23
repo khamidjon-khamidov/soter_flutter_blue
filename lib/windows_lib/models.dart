@@ -35,7 +35,7 @@ class BlueScanResult {
       temp = temp.substring(2);
     } while (temp.isNotEmpty);
 
-    return result;
+    return result.toUpperCase();
   }
 }
 
