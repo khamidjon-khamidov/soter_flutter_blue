@@ -67,6 +67,12 @@ class SoterBluetoothDevice {
     yield await (SoterFlutterBlue.instance as _FlutterBlueWindows)
         .requestMtu(deviceId, _FlutterBlueWindows.DEFAULT_MTU);
   }
+
+  // todo implement this
+  Future<List<BluetoothService>> discoverServices() async {
+    // todo
+    return Future.value([]);
+  }
 }
 
 class SoterBlueScanResult {
