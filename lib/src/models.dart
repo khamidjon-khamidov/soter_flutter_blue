@@ -50,20 +50,18 @@ class SoterBluetoothCharacteristic {
     return _value.value ?? [];
   }
 
-  Stream<BluetoothCharacteristic> get _onCharacteristicChangedStream =>
-      FlutterBlue.instance._methodStream
-          .where((m) => m.method == "OnCharacteristicChanged")
-          .map((m) => m.arguments)
-          .map(
-              (buffer) => new protos.OnCharacteristicChanged.fromBuffer(buffer))
-          .where((p) => p.remoteId == deviceId.toString())
-          .map((p) => new BluetoothCharacteristic.fromProto(p.characteristic))
-          .where((c) => c.uuid == uuid)
-          .map((c) {
-        // Update the characteristic with the new values
-        _updateDescriptors(c.descriptors);
-        return c;
-      });
+  Stream<SoterBluetoothCharacteristic> get _onCharacteristicChangedStream =>
+      _FlutterBlueWindows._messageStream
+          .where((m) => m['characteristicChanged'] != null)
+          .where((m) => _deviceId == m['deviceId'])
+          .where((m) => m['characteristicUuid'] == uuid.toString())
+          .map((m) => SoterBluetoothCharacteristic(
+                Guid(m['characteristicUuid']),
+                Guid(m['serviceUuid']),
+                m['deviceId'],
+                BehaviorSubject.seeded((m['value'] as Uint8List).toList()),
+                null,
+              ));
 
   Stream<List<int>> get _onValueChangedStream =>
       _onCharacteristicChangedStream.map((c) => c.lastValue);

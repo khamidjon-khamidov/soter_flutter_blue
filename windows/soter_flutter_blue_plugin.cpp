@@ -545,14 +545,15 @@ winrt::fire_and_forget SoterFlutterBluePlugin::WriteValueAsync(BluetoothDeviceAg
 
 void SoterFlutterBluePlugin::GattCharacteristic_ValueChanged(GattCharacteristic sender, GattValueChangedEventArgs args) {
   auto uuid = to_uuidstr(sender.Uuid());
+  auto serviceUuid = to_uuidstr(sender.Service().Uuid());
   auto bytes = to_bytevc(args.CharacteristicValue());
   OutputDebugString((L"GattCharacteristic_ValueChanged " + winrt::to_hstring(uuid) + L", " + winrt::to_hstring(to_hexstring(bytes)) + L"\n").c_str());
   message_connector_->Send(EncodableMap{
+    {"characteristicChanged", true},
     {"deviceId", std::to_string(sender.Service().Device().BluetoothAddress())},
-    {"characteristicValue", EncodableMap{
-      {"characteristic", uuid},
-      {"value", bytes},
-    }},
+    {"serviceUuid", serviceUuid},
+    {"characteristicUuid", uuid},
+    {"value", bytes},
   });
 }
 
