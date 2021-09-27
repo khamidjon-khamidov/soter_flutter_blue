@@ -260,10 +260,10 @@ class SoterBlueScanResult {
 }
 
 class BlueScanResult {
-  String name;
-  String _deviceId;
-  Uint8List manufacturerData;
-  int rssi;
+  final String name;
+  final String _deviceId;
+  final Uint8List manufacturerData;
+  final int rssi;
 
   static final RegExp _numeric = RegExp(r'^-?[0-9]+$');
 

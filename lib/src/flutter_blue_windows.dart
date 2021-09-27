@@ -23,10 +23,8 @@ class _FlutterBlueWindows extends SoterFlutterBlue {
       _methodStreamController.add(call);
     });
 
-    _messageConnector.setMessageHandler((dynamic message) async {
-      _messageStreamController.add(message);
-      _handleConnectorMessage(message);
-    });
+    _messageConnector.setMessageHandler(
+        (dynamic message) async => _messageStreamController.add(message));
     _setLogLevelIfAvailable();
   }
 
@@ -136,23 +134,9 @@ class _FlutterBlueWindows extends SoterFlutterBlue {
 
   /// todo implement this
   @override
-  Future<bool?> startAdvertising(Uint8List manufacturerData) {
-    // todo implement
-    return Future.value(false);
-  }
-
-  /// todo implement this
-  @override
   Stream<BluetoothState> get state {
     // todo implement
     return const Stream.empty();
-  }
-
-  /// todo implement this
-  @override
-  Future<bool?> stopAdvertising() {
-    // todo implement
-    return Future.value(false);
   }
 
   @override
@@ -163,44 +147,38 @@ class _FlutterBlueWindows extends SoterFlutterBlue {
     _isScanning.add(false);
   }
 
+  Future<int> requestMtu(String deviceId, int expectedMtu) async {
+    await _method.invokeMethod('requestMtu', {
+      'deviceId': deviceId,
+      'expectedMtu': expectedMtu,
+    });
+    print('requestMtu invokeMethod success');
+    return _messageStream
+        .where((m) => m['mtuConfig'] != null)
+        .map((m) => m['mtuConfig'] as int)
+        .last;
+  }
+
   @override
   void setLogLevel(LogLevel level) {
     // todo implement
   }
 
-  final PublishSubject _mtuConfigController = PublishSubject<int>();
-
-  Future<int> requestMtu(String deviceId, int expectedMtu) async {
-    _method.invokeMethod('requestMtu', {
-      'deviceId': deviceId,
-      'expectedMtu': expectedMtu,
-    }).then((_) => print('requestMtu invokeMethod success'));
-    return (await _messageStream
-        .lastWhere((m) => m['mtuConfig'] != null))['mtuConfig'];
-  }
-
-  Future<void> _handleConnectorMessage(dynamic message) {
-    print('_handleConnectorMessage $message');
-    if (message['ServiceState'] != null) {}
-    // else if (message['characteristicValue'] != null) {
-    //   String deviceId = message['deviceId'];
-    //   var characteristicValue = message['characteristicValue'];
-    //   String characteristic = characteristicValue['characteristic'];
-    //   Uint8List value = Uint8List.fromList(
-    //       characteristicValue['value']); // In case of _Uint8ArrayView
-    //   onValueChanged?.call(deviceId, characteristic, value);
-    // }
-    // else if (message['ConnectionState'] != null) {
-    //   String deviceId = message['deviceId'];
-    //   BlueConnectionState connectionState =
-    //   BlueConnectionState.parse(message['ConnectionState']);
-    //   onConnectionChanged?.call(deviceId, connectionState);
-    // }
-
-    return Future.value();
-  }
-
   ////////////////////////////////////////////////////////////////
+
+  /// todo implement this
+  @override
+  Future<bool?> startAdvertising(Uint8List manufacturerData) {
+    // todo implement
+    return Future.value(false);
+  }
+
+  /// todo implement this
+  @override
+  Future<bool?> stopAdvertising() {
+    // todo implement
+    return Future.value(false);
+  }
 
   @override
   Stream<bool> get isScanning {

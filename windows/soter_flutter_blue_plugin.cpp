@@ -43,6 +43,7 @@ using namespace winrt::Windows::Devices::Bluetooth::GenericAttributeProfile;
 
 using flutter::EncodableValue;
 using flutter::EncodableMap;
+using flutter::EncodableList;
 
 union uint16_t_union {
   uint16_t uint16;
@@ -160,7 +161,7 @@ class SoterFlutterBluePlugin : public flutter::Plugin, public flutter::StreamHan
   void BluetoothLEDevice_ConnectionStatusChanged(BluetoothLEDevice sender, IInspectable args);
   void CleanConnection(uint64_t bluetoothAddress);
 
-  winrt::fire_and_forget SetNotifiableAsync(BluetoothDeviceAgent& bluetoothDeviceAgent, std::string service, std::string characteristic, std::string bleInputProperty);
+  winrt::fire_and_forget SetNotifiableAsync(BluetoothDeviceAgent& bluetoothDeviceAgent, std::string deviceId, std::string service, std::string characteristic, std::string bleInputProperty);
   winrt::fire_and_forget RequestMtuAsync(BluetoothDeviceAgent& bluetoothDeviceAgent, uint64_t expectedMtu);
   winrt::fire_and_forget WriteValueAsync(BluetoothDeviceAgent& bluetoothDeviceAgent, std::string deviceId, std::string service, std::string characteristic, std::vector<uint8_t> value, std::string bleOutputProperty);
   void SoterFlutterBluePlugin::GattCharacteristic_ValueChanged(GattCharacteristic sender, GattValueChangedEventArgs args);
@@ -273,7 +274,7 @@ void SoterFlutterBluePlugin::HandleMethodCall(
         return;
       }
 
-      SetNotifiableAsync(*it->second, service, characteristic, bleInputProperty);
+      SetNotifiableAsync(*it->second, deviceId, service, characteristic, bleInputProperty);
       result->Success(nullptr);
     } else if (method_name.compare("requestMtu") == 0) {
       auto args = std::get<EncodableMap>(*method_call.arguments());
@@ -381,7 +382,7 @@ std::unique_ptr<flutter::StreamHandlerError<EncodableValue>> SoterFlutterBluePlu
 // }
 //
 //
-winrt::fire_and_forget FastBlueWindowsPlugin::DiscoverServicesAsync(uint64_t bluetoothAddress) {
+winrt::fire_and_forget SoterFlutterBluePlugin::DiscoverServicesAsync(uint64_t bluetoothAddress) {
     auto device = co_await BluetoothLEDevice::FromBluetoothAddressAsync(bluetoothAddress);
     auto servicesResult = co_await device.GetGattServicesAsync();
     auto deviceMacAddress = std::to_string(bluetoothAddress);
@@ -491,7 +492,7 @@ winrt::fire_and_forget SoterFlutterBluePlugin::RequestMtuAsync(BluetoothDeviceAg
   });
 }
 
-winrt::fire_and_forget SoterFlutterBluePlugin::SetNotifiableAsync(BluetoothDeviceAgent& bluetoothDeviceAgent, std::string service, std::string characteristic, std::string bleInputProperty) {
+winrt::fire_and_forget SoterFlutterBluePlugin::SetNotifiableAsync(BluetoothDeviceAgent& bluetoothDeviceAgent, std::string deviceId, std::string service, std::string characteristic, std::string bleInputProperty) {
   auto gattCharacteristic = co_await bluetoothDeviceAgent.GetCharacteristicAsync(service, characteristic);
   auto descriptorValue = bleInputProperty == "notification" ? GattClientCharacteristicConfigurationDescriptorValue::Notify
     : bleInputProperty == "indication" ? GattClientCharacteristicConfigurationDescriptorValue::Indicate
@@ -501,12 +502,12 @@ winrt::fire_and_forget SoterFlutterBluePlugin::SetNotifiableAsync(BluetoothDevic
     OutputDebugString((L"WriteClientCharacteristicConfigurationDescriptorAsync " + winrt::to_hstring((int32_t)writeDescriptorStatus) + L"\n").c_str());
     message_connector_->Send(EncodableMap{
        {"SetNotificationResponse", false},
-       {"deviceId", std::to_string(sender.Service().Device().BluetoothAddress())},
+       {"deviceId", deviceId},
     });
   } else {
     message_connector_->Send(EncodableMap{
        {"SetNotificationResponse", true},
-       {"deviceId", std::to_string(sender.Service().Device().BluetoothAddress())},
+       {"deviceId", deviceId},
     });
   }
   if (bleInputProperty != "disabled") {
@@ -532,15 +533,16 @@ winrt::fire_and_forget SoterFlutterBluePlugin::WriteValueAsync(BluetoothDeviceAg
                         );
   }
 
-  message_connector_->Send(EncodableMap{
-      {"WriteCharacteristicResponse", 0}
-      {"deviceId", deviceId},
-      {"serviceUuid", service},
-      {"characteristicsUuid", characteristic},
-      {"success", result==GattCommunicationStatus::Success},
+
+    message_connector_->Send(EncodableMap{
+        {"WriteCharacteristicResponse", 0},
+        {"deviceId", deviceId},
+        {"serviceUuid", service},
+        {"characteristicsUuid", characteristic},
+        {"success", result==GattCommunicationStatus::Success},
     });
 
-  OutputDebugString((L"WriteValueAsync " + winrt::to_hstring(characteristic) + L", " + winrt::to_hstring(to_hexstring(value)) + L", " + winrt::to_hstring((int32_t)writeValueStatus) + L"\n").c_str());
+  OutputDebugString((L"WriteValueAsync " + winrt::to_hstring(characteristic) + L", " + winrt::to_hstring(to_hexstring(value)) + L", " + winrt::to_hstring((int32_t)result) + L"\n").c_str());
 }
 
 void SoterFlutterBluePlugin::GattCharacteristic_ValueChanged(GattCharacteristic sender, GattValueChangedEventArgs args) {
@@ -555,7 +557,7 @@ void SoterFlutterBluePlugin::GattCharacteristic_ValueChanged(GattCharacteristic 
     {"characteristicUuid", uuid},
     {"value", bytes},
   });
-}
+};
 
 
 }  // namespace
