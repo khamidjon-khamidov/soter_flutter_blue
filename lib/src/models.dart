@@ -84,39 +84,41 @@ class SoterBluetoothCharacteristic {
     }
 
     final type = withoutResponse
-        ? CharacteristicWriteType.withoutResponse
-        : CharacteristicWriteType.withResponse;
+        ? BleOutputProperty.withoutResponse
+        : BleOutputProperty.withResponse;
 
-    var request = protos.WriteCharacteristicRequest.create()
-      ..remoteId = deviceId.toString()
-      ..characteristicUuid = uuid.toString()
-      ..serviceUuid = serviceUuid.toString()
-      ..writeType =
-          protos.WriteCharacteristicRequest_WriteType.valueOf(type.index)!
-      ..value = value;
+    _FlutterBlueWindows._method.invokeMethod('writeValue', {
+      'deviceId': _deviceId,
+      'service': _serviceUuid,
+      'characteristic': _uuid,
+      'value': Uint8List.fromList(value),
+      'bleOutputProperty': type,
+    });
 
-    var result = await FlutterBlue.instance._channel
-        .invokeMethod('writeCharacteristic', request.writeToBuffer());
+    print('writeValue invokeMethod success');
 
-    return FlutterBlue.instance._methodStream
-        .where((m) => m.method == "WriteCharacteristicResponse")
-        .map((m) => m.arguments)
-        .map((buffer) =>
-            new protos.WriteCharacteristicResponse.fromBuffer(buffer))
-        .where((p) =>
-            (p.request.remoteId == request.remoteId) &&
-            (p.request.characteristicUuid == request.characteristicUuid) &&
-            (p.request.serviceUuid == request.serviceUuid))
+    return _FlutterBlueWindows._messageStream
+        .where((m) => m['WriteCharacteristicResponse'] == 0)
+        .map((m) {
+          print(
+              'WriteValueResponse came from device: ${m['deviceId']}. Status: ${m['success']}');
+          return m;
+        })
+        .where((m) =>
+            (_deviceId == m['deviceId']) &&
+            (_serviceUuid == m['serviceUuid']) &&
+            (_uuid == m['characteristicsUuid']))
         .first
-        .then((w) => w.success)
+        .then((m) => m['success'])
         .then((success) => (!success)
-            ? throw new Exception('Failed to write the characteristic')
+            ? throw Exception('Failed to write the characteristic')
             : null)
         .then((_) {
-      if (returnValueOnSuccess) {
-        _value.add(value);
-      }
-    }).then((_) => null);
+          if (returnValueOnSuccess) {
+            _value.add(value);
+          }
+        })
+        .then((_) => null);
   }
 
   Future<bool> setNotifyValue(bool notify) async {

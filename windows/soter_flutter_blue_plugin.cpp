@@ -162,7 +162,7 @@ class SoterFlutterBluePlugin : public flutter::Plugin, public flutter::StreamHan
 
   winrt::fire_and_forget SetNotifiableAsync(BluetoothDeviceAgent& bluetoothDeviceAgent, std::string service, std::string characteristic, std::string bleInputProperty);
   winrt::fire_and_forget RequestMtuAsync(BluetoothDeviceAgent& bluetoothDeviceAgent, uint64_t expectedMtu);
-  winrt::fire_and_forget WriteValueAsync(BluetoothDeviceAgent& bluetoothDeviceAgent, std::string service, std::string characteristic, std::vector<uint8_t> value, std::string bleOutputProperty);
+  winrt::fire_and_forget WriteValueAsync(BluetoothDeviceAgent& bluetoothDeviceAgent, std::string deviceId, std::string service, std::string characteristic, std::vector<uint8_t> value, std::string bleOutputProperty);
   void SoterFlutterBluePlugin::GattCharacteristic_ValueChanged(GattCharacteristic sender, GattValueChangedEventArgs args);
 };
 
@@ -300,7 +300,7 @@ void SoterFlutterBluePlugin::HandleMethodCall(
         return;
       }
 
-      WriteValueAsync(*it->second, service, characteristic, value, bleOutputProperty);
+      WriteValueAsync(*it->second, deviceId, service, characteristic, value, bleOutputProperty);
       result->Success(nullptr);
     } else {
       result->NotImplemented();
@@ -516,9 +516,30 @@ winrt::fire_and_forget SoterFlutterBluePlugin::SetNotifiableAsync(BluetoothDevic
   }
 }
 
-winrt::fire_and_forget SoterFlutterBluePlugin::WriteValueAsync(BluetoothDeviceAgent& bluetoothDeviceAgent, std::string service, std::string characteristic, std::vector<uint8_t> value, std::string bleOutputProperty) {
+winrt::fire_and_forget SoterFlutterBluePlugin::WriteValueAsync(BluetoothDeviceAgent& bluetoothDeviceAgent, std::string deviceId, std::string service, std::string characteristic, std::vector<uint8_t> value, std::string bleOutputProperty) {
   auto gattCharacteristic = co_await bluetoothDeviceAgent.GetCharacteristicAsync(service, characteristic);
-  auto writeValueStatus = co_await gattCharacteristic.WriteValueAsync(from_bytevc(value), GattWriteOption::WriteWithResponse);
+  GattCommunicationStatus result;
+
+  if(bleOutputProperty == "withResponse") {
+      result = co_await gattCharacteristic.WriteValueAsync(
+                            from_bytevc(value),
+                            GattWriteOption::WriteWithResponse
+                        );
+  } else {
+      result = co_await gattCharacteristic.WriteValueAsync(
+                            from_bytevc(value),
+                            GattWriteOption::WriteWithoutResponse
+                        );
+  }
+
+  message_connector_->Send(EncodableMap{
+      {"WriteCharacteristicResponse", 0}
+      {"deviceId", deviceId},
+      {"serviceUuid", service},
+      {"characteristicsUuid", characteristic},
+      {"success", result==GattCommunicationStatus::Success},
+    });
+
   OutputDebugString((L"WriteValueAsync " + winrt::to_hstring(characteristic) + L", " + winrt::to_hstring(to_hexstring(value)) + L", " + winrt::to_hstring((int32_t)writeValueStatus) + L"\n").c_str());
 }
 
