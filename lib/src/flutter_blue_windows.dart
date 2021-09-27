@@ -132,13 +132,6 @@ class _FlutterBlueWindows extends SoterFlutterBlue {
     return _scanResults.value;
   }
 
-  /// todo implement this
-  @override
-  Stream<BluetoothState> get state {
-    // todo implement
-    return const Stream.empty();
-  }
-
   @override
   Future stopScan() async {
     await _method.invokeMethod('stopScan');
@@ -159,21 +152,25 @@ class _FlutterBlueWindows extends SoterFlutterBlue {
         .last;
   }
 
+  //////////////////// NOT USED INSIDE THE PROJECT FOR NOW //////////////
+
   @override
   void setLogLevel(LogLevel level) {
     // todo implement
   }
 
-  ////////////////////////////////////////////////////////////////
+  @override
+  Stream<BluetoothState> get state {
+    // todo implement
+    return const Stream.empty();
+  }
 
-  /// todo implement this
   @override
   Future<bool?> startAdvertising(Uint8List manufacturerData) {
     // todo implement
     return Future.value(false);
   }
 
-  /// todo implement this
   @override
   Future<bool?> stopAdvertising() {
     // todo implement
@@ -187,7 +184,6 @@ class _FlutterBlueWindows extends SoterFlutterBlue {
   }
 
   @override
-  // TODO: implement connectedDevices
   Future<List<BluetoothDevice>> get connectedDevices {
     // todo implement
     return Future.value([]);
