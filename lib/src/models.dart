@@ -1,5 +1,145 @@
 part of soter_flutter_blue;
 
+class SoterBluetoothService {
+  final Guid uuid;
+  final String deviceId;
+  final List<SoterBluetoothCharacteristic> characteristics;
+
+  SoterBluetoothService(this.uuid, this.deviceId, this.characteristics);
+}
+
+class SoterBluetoothCharacteristic {
+  final Guid? _uuid;
+  final Guid? _serviceUuid;
+  final String? _deviceId;
+  final BluetoothCharacteristic? _bluetoothCharacteristicFlutterBlue;
+
+  BehaviorSubject<List<int>> _value;
+
+  SoterBluetoothCharacteristic(this._uuid, this._serviceUuid, this._deviceId,
+      this._value, this._bluetoothCharacteristicFlutterBlue);
+
+  Guid get uuid {
+    if (!Platform.isWindows) {
+      return _bluetoothCharacteristicFlutterBlue!.uuid;
+    }
+    return _uuid!;
+  }
+
+  Guid get serviceUuid {
+    if (!Platform.isWindows) {
+      return _bluetoothCharacteristicFlutterBlue!.serviceUuid;
+    }
+    return _serviceUuid!;
+  }
+
+  Stream<List<int>> get value {
+    if (!Platform.isWindows) {
+      return _bluetoothCharacteristicFlutterBlue!.value;
+    }
+    return Rx.merge([
+      _value.stream,
+      _onValueChangedStream,
+    ]);
+  }
+
+  List<int> get lastValue {
+    if (!Platform.isWindows) {
+      return _bluetoothCharacteristicFlutterBlue!.lastValue;
+    }
+    return _value.value ?? [];
+  }
+
+  Stream<BluetoothCharacteristic> get _onCharacteristicChangedStream =>
+      FlutterBlue.instance._methodStream
+          .where((m) => m.method == "OnCharacteristicChanged")
+          .map((m) => m.arguments)
+          .map(
+              (buffer) => new protos.OnCharacteristicChanged.fromBuffer(buffer))
+          .where((p) => p.remoteId == deviceId.toString())
+          .map((p) => new BluetoothCharacteristic.fromProto(p.characteristic))
+          .where((c) => c.uuid == uuid)
+          .map((c) {
+        // Update the characteristic with the new values
+        _updateDescriptors(c.descriptors);
+        return c;
+      });
+
+  Stream<List<int>> get _onValueChangedStream =>
+      _onCharacteristicChangedStream.map((c) => c.lastValue);
+
+  /// Writes the value of a characteristic.
+  /// [CharacteristicWriteType.withoutResponse]: the write is not
+  /// guaranteed and will return immediately with success.
+  /// [CharacteristicWriteType.withResponse]: the method will return after the
+  /// write operation has either passed or failed.
+  Future<Null> write(List<int> value,
+      {bool withoutResponse = false, bool returnValueOnSuccess = false}) async {
+    if (!Platform.isWindows) {
+      return _bluetoothCharacteristicFlutterBlue!.write(
+        value,
+        withoutResponse: withoutResponse,
+        returnValueOnSuccess: returnValueOnSuccess,
+      );
+    }
+
+    final type = withoutResponse
+        ? CharacteristicWriteType.withoutResponse
+        : CharacteristicWriteType.withResponse;
+
+    var request = protos.WriteCharacteristicRequest.create()
+      ..remoteId = deviceId.toString()
+      ..characteristicUuid = uuid.toString()
+      ..serviceUuid = serviceUuid.toString()
+      ..writeType =
+          protos.WriteCharacteristicRequest_WriteType.valueOf(type.index)!
+      ..value = value;
+
+    var result = await FlutterBlue.instance._channel
+        .invokeMethod('writeCharacteristic', request.writeToBuffer());
+
+    return FlutterBlue.instance._methodStream
+        .where((m) => m.method == "WriteCharacteristicResponse")
+        .map((m) => m.arguments)
+        .map((buffer) =>
+            new protos.WriteCharacteristicResponse.fromBuffer(buffer))
+        .where((p) =>
+            (p.request.remoteId == request.remoteId) &&
+            (p.request.characteristicUuid == request.characteristicUuid) &&
+            (p.request.serviceUuid == request.serviceUuid))
+        .first
+        .then((w) => w.success)
+        .then((success) => (!success)
+            ? throw new Exception('Failed to write the characteristic')
+            : null)
+        .then((_) {
+      if (returnValueOnSuccess) {
+        _value.add(value);
+      }
+    }).then((_) => null);
+  }
+
+  Future<bool> setNotifyValue(bool notify) async {
+    if (!Platform.isWindows) {
+      return _bluetoothCharacteristicFlutterBlue!.setNotifyValue(notify);
+    }
+
+    await _FlutterBlueWindows._method.invokeMethod('setNotifiable', {
+      'deviceId': _deviceId.toString(),
+      'service': _serviceUuid.toString(),
+      'characteristic': _uuid.toString(),
+      'bleInputProperty':
+          notify ? BleInputProperty.notification : BleInputProperty.disabled,
+    });
+    print('setNotifiable invokeMethod success');
+
+    return _FlutterBlueWindows._messageStream
+        .where((m) => m['SetNotificationResponse'] != null)
+        .map<bool>((m) => m['SetNotificationResponse'])
+        .last;
+  }
+}
+
 class SoterBluetoothDevice {
   final String name;
   final String deviceId;
@@ -70,7 +210,13 @@ class SoterBluetoothDevice {
 
   // todo implement this
   Future<List<BluetoothService>> discoverServices() async {
-    // todo
+    // if (message['ServiceState'] == 'discovered') {
+    //   String deviceId = message['deviceId'];
+    //   List<dynamic> services = message['services'];
+    //   for (var s in services) {
+    //     onServiceDiscovered?.call(deviceId, s);
+    //   }
+    // }
     return Future.value([]);
   }
 }

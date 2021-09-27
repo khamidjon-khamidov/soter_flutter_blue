@@ -40,10 +40,4 @@ abstract class SoterFlutterBlue {
   Future<bool?> stopAdvertising();
 
   void setLogLevel(LogLevel level);
-
-  void setValueHandler(OnValueChanged? onValueChanged);
-
-  void setServiceHandler(OnServiceDiscovered? onServiceDiscovered);
-
-  void setConnectionHandler(OnConnectionChanged? onConnectionChanged);
 }

@@ -72,19 +72,4 @@ class _FlutterBlueIOSAndroid extends SoterFlutterBlue {
 
   @override
   void setLogLevel(LogLevel level) => FlutterBlue.instance.setLogLevel(level);
-
-  @override
-  void setConnectionHandler(OnConnectionChanged? onConnectionChanged) {
-    // TODO: unnecessary method, find other way to remove it
-  }
-
-  @override
-  void setServiceHandler(OnServiceDiscovered? onServiceDiscovered) {
-    // TODO: unnecessary method, find other way to remove it
-  }
-
-  @override
-  void setValueHandler(OnValueChanged? onValueChanged) {
-    // TODO: unnecessary method, find other way to remove it
-  }
 }
