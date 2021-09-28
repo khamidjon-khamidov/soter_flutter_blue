@@ -6,6 +6,15 @@ class SoterBluetoothService {
   final List<SoterBluetoothCharacteristic> characteristics;
 
   SoterBluetoothService(this.uuid, this.deviceId, this.characteristics);
+
+  SoterBluetoothService.fromBluetoothService(BluetoothService service)
+      : uuid = service.uuid,
+        deviceId = service.deviceId.id,
+        characteristics = service.characteristics
+            .map((characteristic) =>
+                SoterBluetoothCharacteristic.fromFlutterBlueCharacteristic(
+                    characteristic))
+            .toList();
 }
 
 class SoterBluetoothCharacteristic {
@@ -18,6 +27,14 @@ class SoterBluetoothCharacteristic {
 
   SoterBluetoothCharacteristic(this._uuid, this._serviceUuid, this._deviceId,
       this._value, this._bluetoothCharacteristicFlutterBlue);
+
+  SoterBluetoothCharacteristic.fromFlutterBlueCharacteristic(
+      BluetoothCharacteristic characteristic)
+      : _uuid = characteristic.uuid,
+        _serviceUuid = characteristic.serviceUuid,
+        _deviceId = characteristic.deviceId.id,
+        _bluetoothCharacteristicFlutterBlue = characteristic,
+        _value = BehaviorSubject.seeded(characteristic.lastValue);
 
   Guid get uuid {
     if (!Platform.isWindows) {
@@ -143,15 +160,35 @@ class SoterBluetoothCharacteristic {
 
 class SoterBluetoothDevice {
   final String name;
-  final String deviceId;
+  final String _deviceId;
   final BluetoothDevice? _flutterBlueDevice;
 
-  SoterBluetoothDevice(this.name, this.deviceId, this._flutterBlueDevice);
+  static final RegExp _numeric = RegExp(r'^-?[0-9]+$');
 
-  SoterBluetoothDevice.fromScanResult(SoterBlueScanResult scanResult)
-      : name = scanResult.name,
-        deviceId = scanResult.deviceId,
-        _flutterBlueDevice = scanResult._flutterBlueDevice;
+  SoterBluetoothDevice(this.name, this._deviceId, this._flutterBlueDevice);
+
+  String get deviceId => _deviceId;
+
+  String get deviceMac {
+    if (!Platform.isWindows) {
+      return _deviceId;
+    }
+    if (_deviceId.contains(':') || _numeric.hasMatch(_deviceId)) {
+      return _deviceId;
+    }
+    print('_createMacAddress: _deviceId: $_deviceId');
+    String temp = BigInt.parse(_deviceId, radix: 10).toRadixString(16);
+    String result = temp.substring(0, 2);
+    temp = temp.substring(2);
+
+    while (temp.isNotEmpty) {
+      result += (':' + temp.substring(0, 2));
+      temp = temp.substring(2);
+    }
+
+    print('_createMacAddress: mac: $result');
+    return result;
+  }
 
   /// Establishes a connection to the Bluetooth Device.
   Future<void> connect({
@@ -204,93 +241,74 @@ class SoterBluetoothDevice {
       yield* _flutterBlueDevice?.mtu ?? const Stream.empty();
     }
 
-    if (Platform.isWindows) {}
-    yield await (SoterFlutterBlue.instance as _FlutterBlueWindows)
-        .requestMtu(deviceId, _FlutterBlueWindows.DEFAULT_MTU);
+    if (Platform.isWindows) {
+      yield await (SoterFlutterBlue.instance as _FlutterBlueWindows)
+          .requestMtu(deviceId, _FlutterBlueWindows.DEFAULT_MTU);
+    }
   }
 
-  // todo implement this
-  Future<List<BluetoothService>> discoverServices() async {
-    // if (message['ServiceState'] == 'discovered') {
-    //   String deviceId = message['deviceId'];
-    //   List<dynamic> services = message['services'];
-    //   for (var s in services) {
-    //     onServiceDiscovered?.call(deviceId, s);
-    //   }
-    // }
+  Future<List<SoterBluetoothService>> discoverServices() async {
+    if (!Platform.isWindows) {
+      return (await _flutterBlueDevice!.discoverServices())
+          .map((BluetoothService service) =>
+              SoterBluetoothService.fromBluetoothService(service))
+          .toList();
+    }
+
+    // todo implement windows side
     return Future.value([]);
   }
 }
 
 class SoterBlueScanResult {
-  final String name;
-  final String _deviceId;
+  final SoterBluetoothDevice device;
   final List<int> manufacturerData;
   final int rssi;
-  final BluetoothDevice? _flutterBlueDevice;
-
-  static final RegExp _numeric = RegExp(r'^-?[0-9]+$');
 
   SoterBlueScanResult.fromFlutterBlue(ScanResult result)
-      : name = result.advertisementData.localName,
-        _deviceId = result.device.id.id,
+      : device = SoterBluetoothDevice(
+          result.advertisementData.localName,
+          result.device.id.id,
+          result.device,
+        ),
         manufacturerData =
             result.advertisementData.manufacturerData.values.first,
-        rssi = result.rssi,
-        _flutterBlueDevice = result.device;
+        rssi = result.rssi;
 
   SoterBlueScanResult.fromMap(Map map)
-      : name = map['name'],
-        _deviceId = map['deviceId'],
+      : device = SoterBluetoothDevice(
+          map['name'],
+          map['deviceId'],
+          null,
+        ),
         manufacturerData =
             (map['manufacturerData'] as Uint8List).toList().sublist(2),
-        rssi = map['rssi'],
-        _flutterBlueDevice = null;
+        rssi = map['rssi'];
 
   Map toMap() => {
-        'name': name,
-        'deviceId': _deviceId,
+        'name': device.name,
+        'deviceId': device._deviceId,
         'manufacturerData': manufacturerData,
         'rssi': rssi,
       };
-
-  String get deviceId => _deviceId;
-
-  String get deviceMac {
-    if (!Platform.isWindows) {
-      return _deviceId;
-    }
-    if (_deviceId.contains(':') || _numeric.hasMatch(_deviceId)) {
-      return _deviceId;
-    }
-    print('_createMacAddress: _deviceId: $_deviceId');
-    String temp = BigInt.parse(_deviceId, radix: 10).toRadixString(16);
-    String result = temp.substring(0, 2);
-    temp = temp.substring(2);
-
-    while (temp.isNotEmpty) {
-      result += (':' + temp.substring(0, 2));
-      temp = temp.substring(2);
-    }
-
-    print('_createMacAddress: mac: $result');
-    return result;
-  }
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is SoterBlueScanResult &&
           runtimeType == other.runtimeType &&
-          deviceId == other.deviceId;
+          device == other.device &&
+          manufacturerData == other.manufacturerData &&
+          rssi == other.rssi;
+
+  @override
+  int get hashCode =>
+      device.hashCode ^ manufacturerData.hashCode ^ rssi.hashCode;
 
   @override
   String toString() {
-    return 'SoterBlueScanResult{name: $name, deviceId: $deviceId, manufacturerData: $manufacturerData, rssi: $rssi}';
+    return 'SoterBlueScanResult{device: $device, manufacturerData: $manufacturerData, rssi: $rssi}';
   }
-
-  @override
-  int get hashCode => deviceId.hashCode;
 }
 
 class SoterBlueConnectionState {
