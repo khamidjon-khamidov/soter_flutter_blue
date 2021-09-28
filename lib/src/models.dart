@@ -180,6 +180,11 @@ class SoterBluetoothDevice {
     }
     print('_createMacAddress: _deviceId: $_deviceId');
     String temp = BigInt.parse(_deviceId, radix: 10).toRadixString(16);
+
+    if (temp.length != 12) {
+      return _deviceId;
+    }
+
     String result = temp.substring(0, 2);
     temp = temp.substring(2);
 
