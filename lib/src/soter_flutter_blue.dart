@@ -18,7 +18,7 @@ abstract class SoterFlutterBlue {
 
   Stream<BluetoothState> get state;
 
-  Future<List<BluetoothDevice>> get connectedDevices;
+  Future<List<SoterBluetoothDevice>> get connectedDevices;
 
   Stream<SoterBlueScanResult> scan({
     ScanMode scanMode = ScanMode.lowLatency,

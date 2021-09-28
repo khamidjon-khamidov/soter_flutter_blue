@@ -184,7 +184,7 @@ class _FlutterBlueWindows extends SoterFlutterBlue {
   }
 
   @override
-  Future<List<BluetoothDevice>> get connectedDevices {
+  Future<List<SoterBluetoothDevice>> get connectedDevices {
     // todo implement
     return Future.value([]);
   }

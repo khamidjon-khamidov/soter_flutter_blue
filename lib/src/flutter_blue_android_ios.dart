@@ -23,8 +23,11 @@ class _FlutterBlueIOSAndroid extends SoterFlutterBlue {
   Stream<BluetoothState> get state => FlutterBlue.instance.state;
 
   @override
-  Future<List<BluetoothDevice>> get connectedDevices =>
-      FlutterBlue.instance.connectedDevices;
+  Future<List<SoterBluetoothDevice>> get connectedDevices {
+    // todo unimplemented
+    // FlutterBlue.instance.connectedDevices;
+    return Future.value([]);
+  }
 
   @override
   Stream<SoterBlueScanResult> scan({
