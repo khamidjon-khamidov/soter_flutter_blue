@@ -260,7 +260,10 @@ class SoterBluetoothDevice {
             print('Disconnected device: deviceId: ${m['deviceId']}');
             return m;
           })
-          .where((m) => m['deviceId'] == deviceId)
+          .where((m) {
+        print('Disconnected device: deviceId: ${m['deviceId']}, expectedDeviceId: ${deviceId}');
+        return (m['deviceId'] as String) == deviceId;
+      })
           .map<void>((event) {})
           .first;
     }
