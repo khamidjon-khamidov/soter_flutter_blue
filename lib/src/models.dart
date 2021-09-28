@@ -26,7 +26,8 @@ class SoterBluetoothCharacteristic {
   BehaviorSubject<List<int>> _value;
 
   SoterBluetoothCharacteristic(this._uuid, this._serviceUuid, this._deviceId,
-      this._value, this._bluetoothCharacteristicFlutterBlue);
+      List<int> values, this._bluetoothCharacteristicFlutterBlue)
+      : _value = BehaviorSubject.seeded(values);
 
   SoterBluetoothCharacteristic.fromFlutterBlueCharacteristic(
       BluetoothCharacteristic characteristic)
@@ -76,7 +77,7 @@ class SoterBluetoothCharacteristic {
                 Guid(m['characteristicUuid']),
                 Guid(m['serviceUuid']),
                 m['deviceId'],
-                BehaviorSubject.seeded((m['value'] as Uint8List).toList()),
+                (m['value'] as Uint8List).toList(),
                 null,
               ));
 
@@ -153,8 +154,9 @@ class SoterBluetoothCharacteristic {
 
     return _FlutterBlueWindows._messageStream
         .where((m) => m['SetNotificationResponse'] != null)
+        .where((m) => m['deviceId'] == _deviceId!)
         .map<bool>((m) => m['SetNotificationResponse'])
-        .last;
+        .first;
   }
 }
 
@@ -255,8 +257,46 @@ class SoterBluetoothDevice {
           .toList();
     }
 
-    // todo implement windows side
-    return Future.value([]);
+    await _FlutterBlueWindows._method.invokeMethod('discoverServices', {
+      'deviceId': deviceId,
+    });
+
+    return _FlutterBlueWindows._messageStream
+        .where((m) => m['DiscoverServicesState'] != null)
+        .map((m) {
+          print(
+              'Received DiscoverServices Response from device: ${m['deviceId']}. Status: ${m['DiscoverServicesState']}');
+          return m;
+        })
+        .where((m) => m['deviceId'] == _deviceId)
+        .map<List<SoterBluetoothService>>((m) {
+          if (m['DiscoverServicesState'] == 'Failure') {
+            return [];
+          }
+          List<SoterBluetoothService> services = [];
+          List<Map> servicesMapped = m['services'];
+          for (var serviceMapped in servicesMapped) {
+            List<SoterBluetoothCharacteristic> characteristics = [];
+            List<Map> characteristicsMapped = serviceMapped['characteristics'];
+            for (var charMapped in characteristicsMapped) {
+              characteristics.add(SoterBluetoothCharacteristic(
+                Guid(charMapped['uuid']),
+                Guid(charMapped['serviceUuid']),
+                charMapped['deviceId'],
+                (charMapped['value'] as Uint8List).toList(),
+                null,
+              ));
+            }
+
+            services.add(SoterBluetoothService(
+              Guid(serviceMapped['uuid']),
+              serviceMapped['deviceId'],
+              characteristics,
+            ));
+          }
+          return services;
+        })
+        .first;
   }
 }
 

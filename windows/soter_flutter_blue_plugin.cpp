@@ -389,8 +389,8 @@ winrt::fire_and_forget SoterFlutterBluePlugin::DiscoverServicesAsync(uint64_t bl
     if (servicesResult.Status() != GattCommunicationStatus::Success) {
         OutputDebugString((L"GetGattServicesAsync error: " + winrt::to_hstring((int32_t)servicesResult.Status()) + L"\n").c_str());
         message_connector_->Send(EncodableMap{
+            {"DiscoverServicesState", "Failure"},
             {"deviceId", deviceMacAddress},
-            {"ServiceState", "Failure"},
         });
         co_return;
     }
@@ -432,7 +432,7 @@ winrt::fire_and_forget SoterFlutterBluePlugin::DiscoverServicesAsync(uint64_t bl
 
 
     EncodableMap response = EncodableMap{
-        {"ServiceState", "Success"},
+        {"DiscoverServicesState", "Success"},
         {"deviceId", std::to_string(bluetoothAddress)},
         {"services", services},
     };
