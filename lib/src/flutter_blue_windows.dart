@@ -88,9 +88,8 @@ class _FlutterBlueWindows extends SoterFlutterBlue {
     _scanResults.add(<SoterBlueScanResult>[]);
 
     try {
-      _method
-          .invokeMethod('startScan')
-          .then((_) => print('startScan invokeMethod success'));
+      await _method.invokeMethod('startScan');
+      print('startScan invokeMethod success');
     } catch (e) {
       print('Error starting scan.');
       _stopScanPill.add(null);
@@ -101,6 +100,8 @@ class _FlutterBlueWindows extends SoterFlutterBlue {
     yield* _eventScanResult
         .receiveBroadcastStream({'name': 'scanResult'})
         .map((item) => SoterBlueScanResult.fromMap(item))
+        .takeUntil(Rx.merge(killStreams))
+        .doOnDone(stopScan)
         .map((result) {
           final List<SoterBlueScanResult> list = _scanResults.value ?? [];
           int index = list.indexOf(result);
