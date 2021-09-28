@@ -216,6 +216,8 @@ class SoterBluetoothDevice {
         });
       }
 
+      print('SoterFlutterBlue: trying to connect to $deviceId');
+
       await _FlutterBlueWindows._method.invokeMethod('connect', {
         'deviceId': deviceId,
       });
@@ -321,6 +323,11 @@ class SoterBluetoothDevice {
           return services;
         })
         .first;
+  }
+
+  @override
+  String toString() {
+    return 'SoterBluetoothDevice{name: $name, _deviceId: $_deviceId, mac: $deviceMac}';
   }
 }
 
