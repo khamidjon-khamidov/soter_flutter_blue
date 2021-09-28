@@ -20,6 +20,7 @@ class _FlutterBlueWindows extends SoterFlutterBlue {
 
   _FlutterBlueWindows() {
     _method.setMethodCallHandler((MethodCall call) async {
+      print('SoterFlutterBlue: got new message: call');
       _methodStreamController.add(call);
     });
 

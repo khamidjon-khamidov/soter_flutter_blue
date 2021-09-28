@@ -246,11 +246,14 @@ class SoterBluetoothDevice {
       return _flutterBlueDevice?.disconnect();
     }
 
+    print('SoterFlutterBlue: trying to disconnect: $deviceId');
+
     if (Platform.isWindows) {
       await _FlutterBlueWindows._method.invokeMethod('disconnect', {
         'deviceId': deviceId,
       });
 
+      print('SoterFlutterBlue: disconnection request sent to $deviceId');
       return _FlutterBlueWindows._messageStream
           .where((m) => m['DisconnectionRequestState'] != null)
           .map((m) {
