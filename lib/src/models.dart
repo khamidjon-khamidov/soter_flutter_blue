@@ -223,7 +223,16 @@ class SoterBluetoothDevice {
 
       timer?.cancel();
 
-      return;
+      return _FlutterBlueWindows._messageStream
+          .where((m) => m['ConnectionRequestState'] != null)
+          .map((m) {
+            print(
+                'Connection Request result: deviceId: ${m['deviceId']}, status: ${m['ConnectionRequestState']}');
+            return m;
+          })
+          .where((m) => m['deviceId'] == deviceId)
+          .map<void>((event) {})
+          .first;
     }
 
     throw Exception('Couldn\'t make connection');
@@ -236,9 +245,19 @@ class SoterBluetoothDevice {
     }
 
     if (Platform.isWindows) {
-      return _FlutterBlueWindows._method.invokeMethod('disconnect', {
+      await _FlutterBlueWindows._method.invokeMethod('disconnect', {
         'deviceId': deviceId,
       });
+
+      return _FlutterBlueWindows._messageStream
+          .where((m) => m['DisconnectionRequestState'] != null)
+          .map((m) {
+            print('Disconnected device: deviceId: ${m['deviceId']}');
+            return m;
+          })
+          .where((m) => m['deviceId'] == deviceId)
+          .map<void>((event) {})
+          .first;
     }
   }
 

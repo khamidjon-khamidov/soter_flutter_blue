@@ -253,7 +253,6 @@ void SoterFlutterBluePlugin::HandleMethodCall(
       auto args = std::get<EncodableMap>(*method_call.arguments());
       auto deviceId = std::get<std::string>(args[EncodableValue("deviceId")]);
       CleanConnection(std::stoull(deviceId));
-      // TODO send `disconnected` message
       result->Success(nullptr);
     } else if (method_name.compare("discoverServices") == 0) {
       // TODO khamidjon
@@ -447,7 +446,7 @@ winrt::fire_and_forget SoterFlutterBluePlugin::ConnectAsync(uint64_t bluetoothAd
     OutputDebugString((L"GetGattServicesAsync error: " + winrt::to_hstring((int32_t)servicesResult.Status()) + L"\n").c_str());
     message_connector_->Send(EncodableMap{
       {"deviceId", std::to_string(bluetoothAddress)},
-      {"ConnectionState", "disconnected"},
+      {"ConnectionRequestState", "disconnected"},
     });
     co_return;
   }
@@ -458,7 +457,7 @@ winrt::fire_and_forget SoterFlutterBluePlugin::ConnectAsync(uint64_t bluetoothAd
 
   message_connector_->Send(EncodableMap{
     {"deviceId", std::to_string(bluetoothAddress)},
-    {"ConnectionState", "connected"},
+    {"ConnectionRequestState", "connected"},
   });
 }
 
@@ -482,6 +481,11 @@ void SoterFlutterBluePlugin::CleanConnection(uint64_t bluetoothAddress) {
       deviceAgent->gattCharacteristics.at(tokenPair.first).ValueChanged(tokenPair.second);
     }
   }
+
+  message_connector_->Send(EncodableMap{
+      {"DisconnectionRequestState", "disconnected"},
+      {"deviceId", std::to_string(bluetoothAddress)},
+  });
 }
 
 winrt::fire_and_forget SoterFlutterBluePlugin::RequestMtuAsync(BluetoothDeviceAgent& bluetoothDeviceAgent, uint64_t expectedMtu) {
