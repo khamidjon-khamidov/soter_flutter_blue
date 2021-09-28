@@ -100,10 +100,9 @@ class _FlutterBlueWindows extends SoterFlutterBlue {
 
     yield* _eventScanResult
         .receiveBroadcastStream({'name': 'scanResult'})
-        .map((item) => BlueScanResult.fromMap(item))
-        .map((p) {
-          final result = SoterBlueScanResult.fromQuickBlueScanResult(p);
-          final list = _scanResults.value ?? [];
+        .map((item) => SoterBlueScanResult.fromMap(item))
+        .map((result) {
+          final List<SoterBlueScanResult> list = _scanResults.value ?? [];
           int index = list.indexOf(result);
           if (index != -1) {
             list[index] = result;

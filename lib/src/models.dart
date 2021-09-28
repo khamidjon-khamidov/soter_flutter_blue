@@ -82,8 +82,8 @@ class SoterBluetoothCharacteristic {
     }
 
     final type = withoutResponse
-        ? BleOutputProperty.withoutResponse
-        : BleOutputProperty.withResponse;
+        ? SoterBleOutputProperty.withoutResponse
+        : SoterBleOutputProperty.withResponse;
 
     _FlutterBlueWindows._method.invokeMethod('writeValue', {
       'deviceId': _deviceId,
@@ -128,8 +128,9 @@ class SoterBluetoothCharacteristic {
       'deviceId': _deviceId.toString(),
       'service': _serviceUuid.toString(),
       'characteristic': _uuid.toString(),
-      'bleInputProperty':
-          notify ? BleInputProperty.notification : BleInputProperty.disabled,
+      'bleInputProperty': notify
+          ? SoterBleInputProperty.notification
+          : SoterBleInputProperty.disabled,
     });
     print('setNotifiable invokeMethod success');
 
@@ -223,51 +224,42 @@ class SoterBluetoothDevice {
 
 class SoterBlueScanResult {
   final String name;
-  final String deviceId;
+  final String _deviceId;
   final List<int> manufacturerData;
   final int rssi;
   final BluetoothDevice? _flutterBlueDevice;
 
+  static final RegExp _numeric = RegExp(r'^-?[0-9]+$');
+
   SoterBlueScanResult.fromFlutterBlue(ScanResult result)
       : name = result.advertisementData.localName,
-        deviceId = result.device.id.id,
+        _deviceId = result.device.id.id,
         manufacturerData =
             result.advertisementData.manufacturerData.values.first,
         rssi = result.rssi,
         _flutterBlueDevice = result.device;
 
-  SoterBlueScanResult.fromQuickBlueScanResult(BlueScanResult result)
-      : name = result.name,
-        deviceId = result.deviceId,
-        manufacturerData = result.manufacturerData.toList().sublist(2),
-        rssi = result.rssi,
+  SoterBlueScanResult.fromMap(Map map)
+      : name = map['name'],
+        _deviceId = map['deviceId'],
+        manufacturerData =
+            (map['manufacturerData'] as Uint8List).toList().sublist(2),
+        rssi = map['rssi'],
         _flutterBlueDevice = null;
 
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is SoterBlueScanResult &&
-          runtimeType == other.runtimeType &&
-          deviceId == other.deviceId;
+  Map toMap() => {
+        'name': name,
+        'deviceId': _deviceId,
+        'manufacturerData': manufacturerData,
+        'rssi': rssi,
+      };
 
-  @override
-  String toString() {
-    return 'SoterBlueScanResult{name: $name, deviceId: $deviceId, manufacturerData: $manufacturerData, rssi: $rssi}';
-  }
+  String get deviceId => _deviceId;
 
-  @override
-  int get hashCode => deviceId.hashCode;
-}
-
-class BlueScanResult {
-  final String name;
-  final String _deviceId;
-  final Uint8List manufacturerData;
-  final int rssi;
-
-  static final RegExp _numeric = RegExp(r'^-?[0-9]+$');
-
-  String get deviceId {
+  String get deviceMac {
+    if (!Platform.isWindows) {
+      return _deviceId;
+    }
     if (_deviceId.contains(':') || _numeric.hasMatch(_deviceId)) {
       return _deviceId;
     }
@@ -285,29 +277,31 @@ class BlueScanResult {
     return result;
   }
 
-  BlueScanResult.fromMap(map)
-      : name = map['name'],
-        _deviceId = map['deviceId'],
-        manufacturerData = map['manufacturerData'],
-        rssi = map['rssi'];
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is SoterBlueScanResult &&
+          runtimeType == other.runtimeType &&
+          deviceId == other.deviceId;
 
-  Map toMap() => {
-        'name': name,
-        'deviceId': deviceId,
-        'manufacturerData': manufacturerData,
-        'rssi': rssi,
-      };
+  @override
+  String toString() {
+    return 'SoterBlueScanResult{name: $name, deviceId: $deviceId, manufacturerData: $manufacturerData, rssi: $rssi}';
+  }
+
+  @override
+  int get hashCode => deviceId.hashCode;
 }
 
-class BlueConnectionState {
-  static const disconnected = BlueConnectionState._('disconnected');
-  static const connected = BlueConnectionState._('connected');
+class SoterBlueConnectionState {
+  static const disconnected = SoterBlueConnectionState._('disconnected');
+  static const connected = SoterBlueConnectionState._('connected');
 
   final String value;
 
-  const BlueConnectionState._(this.value);
+  const SoterBlueConnectionState._(this.value);
 
-  static BlueConnectionState parse(String value) {
+  static SoterBlueConnectionState parse(String value) {
     if (value == disconnected.value) {
       return disconnected;
     } else if (value == connected.value) {
@@ -317,21 +311,21 @@ class BlueConnectionState {
   }
 }
 
-class BleInputProperty {
-  static const disabled = BleInputProperty._('disabled');
-  static const notification = BleInputProperty._('notification');
-  static const indication = BleInputProperty._('indication');
+class SoterBleInputProperty {
+  static const disabled = SoterBleInputProperty._('disabled');
+  static const notification = SoterBleInputProperty._('notification');
+  static const indication = SoterBleInputProperty._('indication');
 
   final String value;
 
-  const BleInputProperty._(this.value);
+  const SoterBleInputProperty._(this.value);
 }
 
-class BleOutputProperty {
-  static const withResponse = BleOutputProperty._('withResponse');
-  static const withoutResponse = BleOutputProperty._('withoutResponse');
+class SoterBleOutputProperty {
+  static const withResponse = SoterBleOutputProperty._('withResponse');
+  static const withoutResponse = SoterBleOutputProperty._('withoutResponse');
 
   final String value;
 
-  const BleOutputProperty._(this.value);
+  const SoterBleOutputProperty._(this.value);
 }
