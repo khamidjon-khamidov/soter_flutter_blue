@@ -116,8 +116,7 @@ class SoterBluetoothCharacteristic {
     return _FlutterBlueWindows._messageStream
         .where((m) => m['WriteCharacteristicResponse'] == 0)
         .map((m) {
-          print(
-              'WriteValueResponse came from device: ${m['deviceId']}. Status: ${m['success']}');
+          print('WriteValueResponse came from device');
           return m;
         })
         .where((m) =>
