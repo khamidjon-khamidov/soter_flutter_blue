@@ -100,13 +100,13 @@ class SoterBluetoothCharacteristic {
     }
 
     final type = withoutResponse
-        ? SoterBleOutputProperty.withoutResponse
-        : SoterBleOutputProperty.withResponse;
+        ? SoterBleOutputProperty.withoutResponse.value
+        : SoterBleOutputProperty.withResponse.value;
 
     _FlutterBlueWindows._method.invokeMethod('writeValue', {
       'deviceId': _deviceId,
-      'service': _serviceUuid,
-      'characteristic': _uuid,
+      'service': _serviceUuid.toString(),
+      'characteristic': _uuid.toString(),
       'value': Uint8List.fromList(value),
       'bleOutputProperty': type,
     });
@@ -147,8 +147,8 @@ class SoterBluetoothCharacteristic {
       'service': _serviceUuid.toString(),
       'characteristic': _uuid.toString(),
       'bleInputProperty': notify
-          ? SoterBleInputProperty.notification
-          : SoterBleInputProperty.disabled,
+          ? SoterBleInputProperty.notification.value
+          : SoterBleInputProperty.disabled.value,
     });
     print('setNotifiable invokeMethod success');
 
