@@ -41,6 +41,8 @@ using namespace winrt::Windows::Devices::Bluetooth;
 using namespace winrt::Windows::Devices::Bluetooth::Advertisement;
 using namespace winrt::Windows::Devices::Bluetooth::GenericAttributeProfile;
 
+using namespace winrt::Windows::System;
+
 using flutter::EncodableValue;
 using flutter::EncodableMap;
 using flutter::EncodableList;
@@ -160,6 +162,7 @@ class SoterFlutterBluePlugin : public flutter::Plugin, public flutter::StreamHan
   winrt::fire_and_forget ConnectAsync(uint64_t bluetoothAddress);
   void BluetoothLEDevice_ConnectionStatusChanged(BluetoothLEDevice sender, IInspectable args);
   void CleanConnection(uint64_t bluetoothAddress);
+  void DisconnectAllDevices();
 
   winrt::fire_and_forget SetNotifiableAsync(BluetoothDeviceAgent& bluetoothDeviceAgent, std::string deviceId, std::string service, std::string characteristic, std::string bleInputProperty);
   winrt::fire_and_forget RequestMtuAsync(BluetoothDeviceAgent& bluetoothDeviceAgent, uint64_t expectedMtu);
@@ -250,12 +253,11 @@ void SoterFlutterBluePlugin::HandleMethodCall(
       ConnectAsync(std::stoull(deviceId));
       result->Success(nullptr);
     } else if (method_name.compare("disconnect") == 0) {
-      auto args = std::get<EncodableMap>(*method_call.arguments());
-      auto deviceId = std::get<std::string>(args[EncodableValue("deviceId")]);
-      CleanConnection(std::stoull(deviceId));
+      //auto args = std::get<EncodableMap>(*method_call.arguments());
+      //auto deviceId = std::get<std::string>(args[EncodableValue("deviceId")]);
+      DisconnectAllDevices();
       result->Success(nullptr);
     } else if (method_name.compare("discoverServices") == 0) {
-      // TODO khamidjon
       auto args = std::get<EncodableMap>(*method_call.arguments());
       auto deviceId = std::get<std::string>(args[EncodableValue("deviceId")]);
       DiscoverServicesAsync(std::stoull(deviceId));
@@ -359,28 +361,7 @@ std::unique_ptr<flutter::StreamHandlerError<EncodableValue>> SoterFlutterBluePlu
   return nullptr;
 }
 
-// necessary elements
-// BluetoothService: service uuid, device id, List<BluetoothCharacteristics>
-// BluetoothCharacteristic: uuid, deviceId, serviceUuid, List<int> value
-// EncodableMap{
-//      {"ServiceState", String},
-//      {"deviceId", String},
-//      {"services", EncodableList<EncodableMap<SoterBluetoothService>>},
-// }
-// SoterBluetoothService = {
-//      {"uuid", String},
-//      {"deviceId", String},
-//      {"characteristics", EncodableList<EncodableMap<SoterBluetoothCharacteristic>>},
-// }
-//
-// BluetoothCharacteristic = {
-//      {"uuid", String},
-//      {"deviceId", String},
-//      {"serviceUuid", String},
-//      {"value", EncodableList},
-// }
-//
-//
+
 winrt::fire_and_forget SoterFlutterBluePlugin::DiscoverServicesAsync(uint64_t bluetoothAddress) {
     auto device = co_await BluetoothLEDevice::FromBluetoothAddressAsync(bluetoothAddress);
     auto servicesResult = co_await device.GetGattServicesAsync();
@@ -472,6 +453,46 @@ void SoterFlutterBluePlugin::BluetoothLEDevice_ConnectionStatusChanged(Bluetooth
   }
 }
 
+// https://github.com/jasongin/noble-uwp/issues/20
+void SoterFlutterBluePlugin::DisconnectAllDevices(){
+      std::map<uint64_t, std::unique_ptr<BluetoothDeviceAgent>>::iterator it;
+      for (it = connectedDevices.begin(); it != connectedDevices.end(); it++)
+      {
+          // remove all value change tokens
+          it->second->valueChangedTokens.clear();
+
+          // todo this might be necessary if device is not disconnected
+          // remove characteristic's value changed tokens
+          //std::map<std::string, GattCharacteristic>::iterator itCh;
+          //for(itCh=it->second->gattCharacteristics.begin(); itCh!=it->second->gattCharacteristics.end();itCh++){
+          //      itCh->second.ValueChanged({});
+          //}
+
+          // clear current characteristics map to dispose objects
+          it->second->gattCharacteristics.clear();
+
+          // dispose of all services
+          // remove characteristic's value changed tokens
+          std::map<std::string, GattDeviceService>::iterator itS;
+          for(itS=it->second->gattServices.begin(); itS!=it->second->gattServices.end();itS++){
+                itS->second.Close();
+                //itS->second.Dispose();
+          }
+          // clear current services map to dispose objects
+          it->second->gattServices.clear();
+
+          // remove device handlers and device itself
+          // it->second->device.ConnectionStatusChanged = nullptr;
+          it->second->device.Close();
+          it->second->device = nullptr;
+      }
+
+
+      // remove all connected device
+      connectedDevices.clear();
+}
+
+
 void SoterFlutterBluePlugin::CleanConnection(uint64_t bluetoothAddress) {
   auto node = connectedDevices.extract(bluetoothAddress);
   if (!node.empty()) {
@@ -481,11 +502,6 @@ void SoterFlutterBluePlugin::CleanConnection(uint64_t bluetoothAddress) {
       deviceAgent->gattCharacteristics.at(tokenPair.first).ValueChanged(tokenPair.second);
     }
   }
-
-  message_connector_->Send(EncodableMap{
-      {"DisconnectionRequestState", "disconnected"},
-      {"deviceId", std::to_string(bluetoothAddress)},
-  });
 }
 
 winrt::fire_and_forget SoterFlutterBluePlugin::RequestMtuAsync(BluetoothDeviceAgent& bluetoothDeviceAgent, uint64_t expectedMtu) {
@@ -515,8 +531,10 @@ winrt::fire_and_forget SoterFlutterBluePlugin::SetNotifiableAsync(BluetoothDevic
     });
   }
   if (bleInputProperty != "disabled") {
+    // TODO THIS WAS DIFFERENT IN THE ORIGINIAL SOURCE CODE BEFORE, FIXED POSSIBLE BUG BUT NEED TO BE CHECKED
     bluetoothDeviceAgent.valueChangedTokens[characteristic] = gattCharacteristic.ValueChanged({ this, &SoterFlutterBluePlugin::GattCharacteristic_ValueChanged });
   } else {
+    // TODO POSSIBLE BUG -> VALUE CHANGED TOKEN ITSELF IS BEING ASSIGNED TO VALUECHANGED() AGAIN WHICH IS WRONG
     gattCharacteristic.ValueChanged(std::exchange(bluetoothDeviceAgent.valueChangedTokens[characteristic], {}));
   }
 }

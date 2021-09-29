@@ -1,6 +1,6 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
+import 'package:soter_flutter_blue/soter_flutter_blue.dart';
+import 'package:soter_flutter_blue_example/peripheral_detail_page.dart';
 
 void main() {
   runApp(const MyApp());
@@ -14,26 +14,16 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  //StreamSubscription<BlueScanResult?>? _subscription;
-
-  //final List<BlueScanResult> _scanResults = [];
+  final List<SoterBlueScanResult> _scanResults = [];
 
   @override
   void initState() {
     super.initState();
-    // _subscription =
-    //     FakeWindowsSoterBlue.instance.scanResultStream.listen((result) {
-    //   if (!_scanResults.any((r) => r.deviceId == result.deviceId)) {
-    //     print('khamidjon: result: $result');
-    //     setState(() => _scanResults.add(result));
-    //   }
-    // });
   }
 
   @override
   void dispose() {
     super.dispose();
-    //_subscription?.cancel();
   }
 
   @override
@@ -47,8 +37,7 @@ class _MyAppState extends State<MyApp> {
             Column(
           children: [
             FutureBuilder(
-              future: Future.value(
-                  false), // FakeWindowsSoterBlue.instance.isBluetoothAvailable(),
+              future: SoterFlutterBlue.instance.isOn,
               builder: (context, snapshot) {
                 var available = snapshot.data?.toString() ?? '...';
                 return Text('Bluetooth init: $available');
@@ -69,16 +58,11 @@ class _MyAppState extends State<MyApp> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: <Widget>[
-        ElevatedButton(
-          child: const Text('startScan'),
-          onPressed: () {
-            //FakeWindowsSoterBlue.instance.startScan();
-          },
-        ),
+        ElevatedButton(child: const Text('startScan'), onPressed: () {}),
         ElevatedButton(
           child: const Text('stopScan'),
           onPressed: () {
-            //FakeWindowsSoterBlue.instance.stopScan();
+            SoterFlutterBlue.instance.stopScan();
           },
         ),
       ],
@@ -86,25 +70,36 @@ class _MyAppState extends State<MyApp> {
   }
 
   Widget _buildListView() {
-    return Expanded(
-      child: ListView.separated(
-        itemBuilder: (context, index) => ListTile(
-          title: Text('hello'),
-          // title: Text(
-          //     '${_scanResults[index].name}(${_scanResults[index].rssi})\n${_scanResults[index].manufacturerData.toString()}'),
-          // subtitle: Text(_scanResults[index].deviceId),
-          onTap: () {
-            // Navigator.push(
-            //     context,
-            //     MaterialPageRoute(
-            //       builder: (context) => null
-            //           // PeripheralDetailPage(_scanResults[index].deviceId),)
-            //     );
-          },
-        ),
-        separatorBuilder: (context, index) => const Divider(),
-        itemCount: 0, //_scanResults.length,
-      ),
-    );
+    return StreamBuilder(
+        stream: SoterFlutterBlue.instance.scan(),
+        builder: (BuildContext context,
+            AsyncSnapshot<SoterBlueScanResult> snapshot) {
+          if (snapshot.hasData) {
+            var result = snapshot.data!;
+            if (!_scanResults.any((element) =>
+                element.device.deviceId == result.device.deviceId)) {
+              _scanResults.add(result);
+            }
+          }
+          return Expanded(
+            child: ListView.separated(
+              itemBuilder: (context, index) => ListTile(
+                title: Text(
+                    '${_scanResults[index].device.name}(${_scanResults[index].rssi})\n${_scanResults[index].manufacturerData.toString()}'),
+                subtitle: Text(_scanResults[index].device.deviceMac),
+                onTap: () {
+                  Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            PeripheralDetailPage(_scanResults[index].device),
+                      ));
+                },
+              ),
+              separatorBuilder: (context, index) => const Divider(),
+              itemCount: _scanResults.length,
+            ),
+          );
+        });
   }
 }

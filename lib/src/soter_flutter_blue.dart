@@ -14,8 +14,6 @@ abstract class SoterFlutterBlue {
 
   Stream<bool> get isScanning;
 
-  Stream<List<SoterBlueScanResult>> get scanResults;
-
   Stream<BluetoothState> get state;
 
   Future<List<SoterBluetoothDevice>> get connectedDevices;

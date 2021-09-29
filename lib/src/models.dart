@@ -233,7 +233,9 @@ class SoterBluetoothDevice {
             return m;
           })
           .where((m) => m['deviceId'] == deviceId)
-          .map<void>((event) {})
+          .map<void>((event) {
+            print('Connected to device: $deviceId');
+          })
           .first;
     }
 
@@ -261,9 +263,10 @@ class SoterBluetoothDevice {
             return m;
           })
           .where((m) {
-        print('Disconnected device: deviceId: ${m['deviceId']}, expectedDeviceId: ${deviceId}');
-        return (m['deviceId'] as String) == deviceId;
-      })
+            print(
+                'Disconnected device: deviceId: ${m['deviceId']}, expectedDeviceId: ${deviceId}');
+            return (m['deviceId'] as String) == deviceId;
+          })
           .map<void>((event) {})
           .first;
     }
@@ -306,10 +309,10 @@ class SoterBluetoothDevice {
             return [];
           }
           List<SoterBluetoothService> services = [];
-          List<Map> servicesMapped = m['services'];
+          List servicesMapped = m['services'];
           for (var serviceMapped in servicesMapped) {
             List<SoterBluetoothCharacteristic> characteristics = [];
-            List<Map> characteristicsMapped = serviceMapped['characteristics'];
+            List characteristicsMapped = serviceMapped['characteristics'];
             for (var charMapped in characteristicsMapped) {
               characteristics.add(SoterBluetoothCharacteristic(
                 Guid(charMapped['uuid']),
