@@ -304,6 +304,18 @@ void SoterFlutterBluePlugin::HandleMethodCall(
 
       WriteValueAsync(*it->second, deviceId, service, characteristic, value, bleOutputProperty);
       result->Success(nullptr);
+    } else if(method_name.compare("connectedDevices") == 0) {
+      EncodableList mDevices = {};
+      std::map<uint64_t, std::unique_ptr<BluetoothDeviceAgent>>::iterator it;
+      for (it = connectedDevices.begin(); it != connectedDevices.end(); it++){
+
+              mDevices.push_back(EncodableMap{
+                  {"name", winrt::to_string(it->second->device.Name())},
+                  {"bluetoothAddress", std::to_string(it->second->device.BluetoothAddress())},
+                  {"deviceId", winrt::to_string(it->second->device.DeviceId())}, //it->second->device.DeviceId()
+              });
+      }
+      result->Success(mDevices);
     } else {
       result->NotImplemented();
     }

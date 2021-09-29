@@ -255,21 +255,26 @@ class SoterBluetoothDevice {
         'deviceId': deviceId,
       });
 
-      print('SoterFlutterBlue: disconnection request sent to $deviceId');
-      return _FlutterBlueWindows._messageStream
-          .where((m) => m['DisconnectionRequestState'] != null)
-          .map((m) {
-            print('Disconnected device: deviceId: ${m['deviceId']}');
-            return m;
-          })
-          .where((m) {
-            print(
-                'Disconnected device: deviceId: ${m['deviceId']}, expectedDeviceId: ${deviceId}');
-            return (m['deviceId'] as String) == deviceId;
-          })
-          .map<void>((event) {})
-          .first;
+      print('SoterFlutterBlue: disconnected');
+      return Future.value();
     }
+
+    return Future.value();
+    //   print('SoterFlutterBlue: disconnection request sent to $deviceId');
+    //   return _FlutterBlueWindows._messageStream
+    //       .where((m) => m['DisconnectionRequestState'] != null)
+    //       .map((m) {
+    //         print('Disconnected device: deviceId: ${m['deviceId']}');
+    //         return m;
+    //       })
+    //       .where((m) {
+    //         print(
+    //             'Disconnected device: deviceId: ${m['deviceId']}, expectedDeviceId: ${deviceId}');
+    //         return (m['deviceId'] as String) == deviceId;
+    //       })
+    //       .map<void>((event) {})
+    //       .first;
+    // }
   }
 
   /// The MTU size in bytes

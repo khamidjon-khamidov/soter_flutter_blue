@@ -1,14 +1,5 @@
-import 'package:convert/convert.dart';
 import 'package:flutter/material.dart';
 import 'package:soter_flutter_blue/soter_flutter_blue.dart';
-
-const WOODEMI_SUFFIX = 'ba5e-f4ee-5ca1-eb1e5e4b1ce0';
-
-const WOODEMI_SERV__COMMAND = '57444d01-$WOODEMI_SUFFIX';
-const WOODEMI_CHAR__COMMAND_REQUEST = '57444e02-$WOODEMI_SUFFIX';
-const WOODEMI_CHAR__COMMAND_RESPONSE = WOODEMI_CHAR__COMMAND_REQUEST;
-
-const WOODEMI_MTU_WUART = 247;
 
 class PeripheralDetailPage extends StatefulWidget {
   final SoterBluetoothDevice device;
@@ -25,6 +16,16 @@ class _PeripheralDetailPageState extends State<PeripheralDetailPage> {
   List<SoterBluetoothService> services = [];
   int mtu = -1;
   String status = 'not connected';
+  List<SoterBluetoothDevice> connectedDevices = [];
+
+  String convertConnectedDevicesToString() {
+    String result = 'Connected Devices: ${connectedDevices.length}\n';
+    for (var device in connectedDevices) {
+      result +=
+          'name: ${device.name}, deviceId: ${device.deviceId}, mac: ${device.deviceMac}\n';
+    }
+    return result;
+  }
 
   String convertServicesToString() {
     String result = '';
@@ -34,12 +35,6 @@ class _PeripheralDetailPageState extends State<PeripheralDetailPage> {
 
     return result;
   }
-
-  final serviceUUID = TextEditingController(text: WOODEMI_SERV__COMMAND);
-  final characteristicUUID =
-      TextEditingController(text: WOODEMI_CHAR__COMMAND_REQUEST);
-  final binaryCode = TextEditingController(
-      text: hex.encode([0x01, 0x0A, 0x00, 0x00, 0x00, 0x01]));
 
   @override
   Widget build(BuildContext context) {
@@ -88,33 +83,14 @@ class _PeripheralDetailPageState extends State<PeripheralDetailPage> {
             ],
           ),
           ElevatedButton(
-            child: const Text('setNotifiable'),
-            onPressed: () {
-              // widget.device..setNotifiable(
-              //     widget.deviceId,
-              //     WOODEMI_SERV__COMMAND,
-              //     WOODEMI_CHAR__COMMAND_RESPONSE,
-              //     BleInputProperty.indication);
+            child: const Text('Connected Devices'),
+            onPressed: () async {
+              connectedDevices =
+                  await SoterFlutterBlue.instance.connectedDevices;
+              setState(() {});
             },
           ),
-          TextField(
-            controller: serviceUUID,
-            decoration: const InputDecoration(
-              labelText: 'ServiceUUIDs: ',
-            ),
-          ),
-          TextField(
-            controller: characteristicUUID,
-            decoration: const InputDecoration(
-              labelText: 'CharacteristicUUID',
-            ),
-          ),
-          TextField(
-            controller: binaryCode,
-            decoration: const InputDecoration(
-              labelText: 'Binary code',
-            ),
-          ),
+          Text('${convertConnectedDevicesToString()}'),
           // ElevatedButton(
           //   child: const Text('send'),
           //   onPressed: () {

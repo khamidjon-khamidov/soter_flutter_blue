@@ -153,6 +153,21 @@ class _FlutterBlueWindows extends SoterFlutterBlue {
         .last;
   }
 
+  @override
+  Future<List<SoterBluetoothDevice>> get connectedDevices async {
+    List devices = await _method.invokeMethod('connectedDevices');
+    List<SoterBluetoothDevice> result = [];
+    print('SoterFlutterBlue: got connected devices: count: ${devices.length}');
+    for (var device in devices) {
+      result.add(SoterBluetoothDevice(
+        device['name'],
+        device['deviceId'],
+        null,
+      ));
+    }
+    return result;
+  }
+
   //////////////////// NOT USED INSIDE THE PROJECT FOR NOW //////////////
 
   @override
@@ -182,11 +197,5 @@ class _FlutterBlueWindows extends SoterFlutterBlue {
   Stream<bool> get isScanning {
     // todo implement
     return _isScanning.stream;
-  }
-
-  @override
-  Future<List<SoterBluetoothDevice>> get connectedDevices {
-    // todo implement
-    return Future.value([]);
   }
 }
