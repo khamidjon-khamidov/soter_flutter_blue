@@ -77,7 +77,9 @@ class SoterBluetoothCharacteristic {
                 Guid(m['characteristicUuid']),
                 Guid(m['serviceUuid']),
                 m['deviceId'],
-                (m['value'] as Uint8List).toList(),
+                m['value'] == null
+                    ? List.empty()
+                    : (m['value'] as Uint8List).toList(),
                 null,
               ));
 
@@ -324,7 +326,9 @@ class SoterBluetoothDevice {
                 Guid(charMapped['uuid']),
                 Guid(charMapped['serviceUuid']),
                 charMapped['deviceId'],
-                (charMapped['value'] as Uint8List).toList(),
+                charMapped['value'] == null
+                    ? List.empty()
+                    : (charMapped['value'] as Uint8List).toList(),
                 null,
               ));
             }
@@ -367,9 +371,20 @@ class SoterBlueScanResult {
           map['deviceId'],
           null,
         ),
-        manufacturerData =
-            (map['manufacturerData'] as Uint8List).toList().sublist(2),
+        manufacturerData = getManufacturerData(map),
         rssi = map['rssi'];
+
+  static List<int> getManufacturerData(dynamic map) {
+    if (map['manufacturerData'] == null) return List.empty();
+
+    // if device type mode is DFU return manufacturer data itself
+    if ((map['name'] as String) == "SoterDFU" ||
+        (map['manufacturerData'] as Uint8List).length < 2) {
+      return (map['manufacturerData'] as Uint8List).toList();
+    }
+
+    return (map['manufacturerData'] as Uint8List).toList().sublist(2);
+  }
 
   Map toMap() => {
         'name': device.name,
