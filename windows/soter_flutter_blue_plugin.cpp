@@ -269,6 +269,10 @@ void SoterFlutterBluePlugin::HandleMethodCall(
       auto service = std::get<std::string>(args[EncodableValue("service")]);
       auto characteristic = std::get<std::string>(args[EncodableValue("characteristic")]);
       auto bleInputProperty = std::get<std::string>(args[EncodableValue("bleInputProperty")]);
+      OutputDebugString((L"Khamidjon: setNotifiable: service:  " + winrt::to_hstring(service) + L"\n").c_str());
+      OutputDebugString((L"Khamidjon: setNotifiable: characteristic:  " + winrt::to_hstring(characteristic) + L"\n").c_str());
+      OutputDebugString((L"Khamidjon: setNotifiable: bleInputProperty:  " + winrt::to_hstring(bleInputProperty) + L"\n").c_str());
+
       auto it = connectedDevices.find(std::stoull(deviceId));
       if (it == connectedDevices.end()) {
         result->Error("IllegalArgument", "Unknown devicesId:" + deviceId);
@@ -296,6 +300,15 @@ void SoterFlutterBluePlugin::HandleMethodCall(
       auto characteristic = std::get<std::string>(args[EncodableValue("characteristic")]);
       auto value = std::get<std::vector<uint8_t>>(args[EncodableValue("value")]);
       auto bleOutputProperty = std::get<std::string>(args[EncodableValue("bleOutputProperty")]);
+      OutputDebugString((L"Khamidjon: writing value: service:  " + winrt::to_hstring(service) + L"\n").c_str());
+      OutputDebugString((L"Khamidjon: writing value: characteristic:  " + winrt::to_hstring(characteristic) + L"\n").c_str());
+      OutputDebugString((L"Khamidjon: writing value: bleOutputProperty:  " + winrt::to_hstring(bleOutputProperty) + L"\n").c_str());
+      winrt::hstring debugResult = L"";
+      for(uint8_t v : value) {
+          debugResult = debugResult + L", " + winrt::to_hstring(std::to_string(v));
+      }
+      OutputDebugString((L"Khamidjon: writing: debugResult:  " + winrt::to_hstring(debugResult) + L"\n").c_str());
+
       auto it = connectedDevices.find(std::stoull(deviceId));
       if (it == connectedDevices.end()) {
         result->Error("IllegalArgument", "Unknown devicesId:" + deviceId);
@@ -529,6 +542,17 @@ winrt::fire_and_forget SoterFlutterBluePlugin::SetNotifiableAsync(BluetoothDevic
   auto descriptorValue = bleInputProperty == "notification" ? GattClientCharacteristicConfigurationDescriptorValue::Notify
     : bleInputProperty == "indication" ? GattClientCharacteristicConfigurationDescriptorValue::Indicate
     : GattClientCharacteristicConfigurationDescriptorValue::None;
+
+  if(characteristic.compare("8ec90003-f315-4f60-9fb8-838830daea50")==0) {
+        descriptorValue = GattClientCharacteristicConfigurationDescriptorValue::Indicate; // indication
+  }
+
+  // if service is dfu, change notification type
+  //if(service.compare("0000fe59-0000-1000-8000-00805f9b34fb")==0) {
+  //     descriptorValue = GattClientCharacteristicConfigurationDescriptorValue::Indicate; // indication
+  //}
+
+
   auto writeDescriptorStatus = co_await gattCharacteristic.WriteClientCharacteristicConfigurationDescriptorAsync(descriptorValue);
   if (writeDescriptorStatus != GattCommunicationStatus::Success){
     OutputDebugString((L"WriteClientCharacteristicConfigurationDescriptorAsync " + winrt::to_hstring((int32_t)writeDescriptorStatus) + L"\n").c_str());
@@ -555,6 +579,7 @@ winrt::fire_and_forget SoterFlutterBluePlugin::WriteValueAsync(BluetoothDeviceAg
   auto gattCharacteristic = co_await bluetoothDeviceAgent.GetCharacteristicAsync(service, characteristic);
   GattCommunicationStatus result;
 
+  OutputDebugString(L"started trying to write");
   if(bleOutputProperty == "withResponse") {
       result = co_await gattCharacteristic.WriteValueAsync(
                             from_bytevc(value),

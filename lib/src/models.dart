@@ -283,8 +283,10 @@ class SoterBluetoothDevice {
     }
 
     if (Platform.isWindows) {
-      yield await (SoterFlutterBlue.instance as _FlutterBlueWindows)
+      int mMtu = await (SoterFlutterBlue.instance as _FlutterBlueWindows)
           .requestMtu(deviceId, _FlutterBlueWindows.DEFAULT_MTU);
+      print('SoterFlutterBlue: got mtu response: ${mMtu}');
+      yield mMtu;
     }
   }
 

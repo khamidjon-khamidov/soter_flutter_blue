@@ -150,7 +150,7 @@ class _FlutterBlueWindows extends SoterFlutterBlue {
     return _messageStream
         .where((m) => m['mtuConfig'] != null)
         .map((m) => m['mtuConfig'] as int)
-        .last;
+        .first;
   }
 
   @override
