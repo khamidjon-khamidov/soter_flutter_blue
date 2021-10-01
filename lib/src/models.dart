@@ -113,18 +113,22 @@ class SoterBluetoothCharacteristic {
       'bleOutputProperty': type,
     });
 
-    print('writeValue invokeMethod success');
+    print(
+        'SoterFlutterBlue: writeValue invokeMethod: characteristic: ${_uuid.toString()}, value: $value');
 
     return _FlutterBlueWindows._messageStream
         .where((m) => m['WriteCharacteristicResponse'] == 0)
         .map((m) {
-          print('WriteValueResponse came from device');
+          print('SoterFlutterBlue: WriteValueResponse came from device');
           return m;
         })
-        .where((m) =>
-            (_deviceId == m['deviceId']) &&
-            (_serviceUuid == m['serviceUuid']) &&
-            (_uuid == m['characteristicsUuid']))
+        .where((m) {
+          print(
+              "SoterFlutterBlue: characteristic: ${m['characteristicsUuid']}, status: ${m['success']}");
+          return (_deviceId == m['deviceId']) &&
+              (_serviceUuid == m['serviceUuid']) &&
+              (_uuid == m['characteristicsUuid']);
+        })
         .first
         .then((m) => m['success'])
         .then((success) => (!success)
@@ -284,12 +288,18 @@ class SoterBluetoothDevice {
       yield* _flutterBlueDevice?.mtu ?? const Stream.empty();
     }
 
+    // windows is sending 23 mtu but it is crashing with this value
+    // so sending just 20 mtu
     if (Platform.isWindows) {
-      int mMtu = await (SoterFlutterBlue.instance as _FlutterBlueWindows)
-          .requestMtu(deviceId, _FlutterBlueWindows.DEFAULT_MTU);
-      print('SoterFlutterBlue: got mtu response: ${mMtu}');
-      yield mMtu;
+      yield 23;
     }
+
+    // if (Platform.isWindows) {
+    //   int mMtu = await (SoterFlutterBlue.instance as _FlutterBlueWindows)
+    //       .requestMtu(deviceId, _FlutterBlueWindows.DEFAULT_MTU);
+    //   print('SoterFlutterBlue: got mtu response: ${mMtu}');
+    //   yield mMtu;
+    // }
   }
 
   Future<List<SoterBluetoothService>> discoverServices() async {
