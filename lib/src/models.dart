@@ -291,7 +291,7 @@ class SoterBluetoothDevice {
     // windows is sending 23 mtu but it is crashing with this value
     // so sending just 20 mtu
     if (Platform.isWindows) {
-      yield 23;
+      yield 20;
     }
 
     // if (Platform.isWindows) {
