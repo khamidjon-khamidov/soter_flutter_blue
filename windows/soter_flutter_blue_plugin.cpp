@@ -543,14 +543,14 @@ winrt::fire_and_forget SoterFlutterBluePlugin::SetNotifiableAsync(BluetoothDevic
     : bleInputProperty == "indication" ? GattClientCharacteristicConfigurationDescriptorValue::Indicate
     : GattClientCharacteristicConfigurationDescriptorValue::None;
 
-  if(characteristic.compare("8ec90003-f315-4f60-9fb8-838830daea50")==0) {
-        descriptorValue = GattClientCharacteristicConfigurationDescriptorValue::Indicate; // indication
-  }
+  //if(characteristic.compare("8ec90003-f315-4f60-9fb8-838830daea50")==0) {
+  //      descriptorValue = GattClientCharacteristicConfigurationDescriptorValue::Indicate; // indication
+  //}
 
   // if service is dfu, change notification type
-  //if(service.compare("0000fe59-0000-1000-8000-00805f9b34fb")==0) {
-  //     descriptorValue = GattClientCharacteristicConfigurationDescriptorValue::Indicate; // indication
-  //}
+  if(service.compare("0000fe59-0000-1000-8000-00805f9b34fb")==0) {
+       descriptorValue = GattClientCharacteristicConfigurationDescriptorValue::Indicate; // indication
+  }
 
 
   auto writeDescriptorStatus = co_await gattCharacteristic.WriteClientCharacteristicConfigurationDescriptorAsync(descriptorValue);
