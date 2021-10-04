@@ -300,6 +300,7 @@ void SoterFlutterBluePlugin::HandleMethodCall(
       auto characteristic = std::get<std::string>(args[EncodableValue("characteristic")]);
       auto value = std::get<std::vector<uint8_t>>(args[EncodableValue("value")]);
       auto bleOutputProperty = std::get<std::string>(args[EncodableValue("bleOutputProperty")]);
+      OutputDebugString((L"Khamidjon: writing value: device:  " + winrt::to_hstring(deviceId) + L"\n").c_str());
       OutputDebugString((L"Khamidjon: writing value: service:  " + winrt::to_hstring(service) + L"\n").c_str());
       OutputDebugString((L"Khamidjon: writing value: characteristic:  " + winrt::to_hstring(characteristic) + L"\n").c_str());
       OutputDebugString((L"Khamidjon: writing value: bleOutputProperty:  " + winrt::to_hstring(bleOutputProperty) + L"\n").c_str());
@@ -559,12 +560,31 @@ winrt::fire_and_forget SoterFlutterBluePlugin::SetNotifiableAsync(BluetoothDevic
 
   // if service is dfu, change notification type
   // service uuid -> 0000fe59-0000-1000-8000-00805f9b34fb
-  //if(characteristic.compare("8ec90003-f315-4f60-9fb8-838830daea50")==0) {
-  //      descriptorValue = GattClientCharacteristicConfigurationDescriptorValue::Indicate; // indication
-  //}
-  if(service.compare("0000fe59-0000-1000-8000-00805f9b34fb")==0) {
-       descriptorValue = GattClientCharacteristicConfigurationDescriptorValue::Indicate; // indication
+  // 8ec90003-f315-4f60-9fb8-838830daea50 ------> Indication
+  // 8ec90001-f315-4f60-9fb8-838830daea50 ------> Notification
+  // go to dfu mode
+  if(characteristic.compare("8ec90003-f315-4f60-9fb8-838830daea50")==0) {
+        descriptorValue = GattClientCharacteristicConfigurationDescriptorValue::Indicate; // indication
   }
+
+  // send initial commands
+  if(characteristic.compare("8ec90001-f315-4f60-9fb8-838830daea50")==0) {
+        descriptorValue = GattClientCharacteristicConfigurationDescriptorValue::Notify; // notification
+  }
+
+  // 8ec90002-f315-4f60-9fb8-838830daea50
+  if(characteristic.compare("8ec90002-f315-4f60-9fb8-838830daea50")==0) {
+          descriptorValue = GattClientCharacteristicConfigurationDescriptorValue::Notify; // indication
+  }
+
+  OutputDebugString(L"RequestMtuAsync expectedMtu\n");
+  //if(service.compare("0000fe59-0000-1000-8000-00805f9b34fb")==0) {
+  //     descriptorValue = GattClientCharacteristicConfigurationDescriptorValue::Indicate; // indication
+  //}
+
+  //if(service.compare("0000fe59-0000-1000-8000-00805f9b34fb")==0) {
+  //     descriptorValue = GattClientCharacteristicConfigurationDescriptorValue::Indicate; // indication
+  //}
 
   auto writeDescriptorStatus = co_await gattCharacteristic.WriteClientCharacteristicConfigurationDescriptorAsync(descriptorValue);
   if (writeDescriptorStatus != GattCommunicationStatus::Success){
