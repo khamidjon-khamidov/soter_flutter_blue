@@ -127,11 +127,14 @@ class SoterBluetoothCharacteristic {
         .where((m) {
           print(
               "SoterFlutterBlue: characteristic: ${m['characteristicsUuid']}, status: ${m['success']}");
-          bool sendingResponse = (_deviceId == m['deviceId']) &&
-              (_serviceUuid == m['serviceUuid']) &&
-              (_uuid.toString() == m['characteristicsUuid']);
+          bool sendingResponseToApp =
+              (_deviceId == (m['deviceId'] as String)) &&
+                  (_serviceUuid.toString() == (m['serviceUuid'] as String)) &&
+                  (_uuid.toString() == (m['characteristicsUuid'] as String));
 
-          return sendingResponse;
+          print(
+              "SoterFlutterBlue: sendingWriteResponseToApp: $sendingResponseToApp");
+          return sendingResponseToApp;
         })
         .first
         .then((m) => m['success'])
