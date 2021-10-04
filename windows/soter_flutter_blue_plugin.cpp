@@ -544,7 +544,7 @@ void SoterFlutterBluePlugin::CleanConnection(uint64_t bluetoothAddress) {
 }
 
 winrt::fire_and_forget SoterFlutterBluePlugin::RequestMtuAsync(BluetoothDeviceAgent& bluetoothDeviceAgent, uint64_t expectedMtu) {
-  OutputDebugString(L"RequestMtuAsync expectedMtu");
+  OutputDebugString(L"RequestMtuAsync expectedMtu\n");
   auto gattSession = co_await GattSession::FromDeviceIdAsync(bluetoothDeviceAgent.device.BluetoothDeviceId());
   message_connector_->Send(EncodableMap{
     {"mtuConfig", (int64_t)gattSession.MaxPduSize()},
