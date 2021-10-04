@@ -158,7 +158,7 @@ class SoterFlutterBluePlugin : public flutter::Plugin, public flutter::StreamHan
   std::map<uint64_t, std::unique_ptr<BluetoothDeviceAgent>> connectedDevices{};
 
   winrt::fire_and_forget DiscoverServicesAsync(uint64_t bluetoothAddress, std::string deviceId);
-
+  winrt::fire_and_forget StartScanAsync();
   winrt::fire_and_forget ConnectAsync(uint64_t bluetoothAddress);
   void BluetoothLEDevice_ConnectionStatusChanged(BluetoothLEDevice sender, IInspectable args);
   void CleanConnection(uint64_t bluetoothAddress);
@@ -387,6 +387,14 @@ std::unique_ptr<flutter::StreamHandlerError<EncodableValue>> SoterFlutterBluePlu
   return nullptr;
 }
 
+winrt::fire_and_forget SoterFlutterBluePlugin::StartScanAsync(){
+      if (!bluetoothLEWatcher) {
+        bluetoothLEWatcher = BluetoothLEAdvertisementWatcher();
+        bluetoothLEWatcherReceivedToken = bluetoothLEWatcher.Received({ this, &SoterFlutterBluePlugin::BluetoothLEWatcher_Received });
+      }
+      bluetoothLEWatcher.Start();
+      co_return;
+}
 
 winrt::fire_and_forget SoterFlutterBluePlugin::DiscoverServicesAsync(uint64_t bluetoothAddress, std::string deviceId) {
     auto device = co_await BluetoothLEDevice::FromBluetoothAddressAsync(bluetoothAddress);
@@ -574,7 +582,7 @@ winrt::fire_and_forget SoterFlutterBluePlugin::SetNotifiableAsync(BluetoothDevic
 
   // 8ec90002-f315-4f60-9fb8-838830daea50
   if(characteristic.compare("8ec90002-f315-4f60-9fb8-838830daea50")==0) {
-          descriptorValue = GattClientCharacteristicConfigurationDescriptorValue::Notify; // indication
+          descriptorValue = GattClientCharacteristicConfigurationDescriptorValue::Indicate; // indication
   }
 
   OutputDebugString(L"RequestMtuAsync expectedMtu\n");
@@ -613,6 +621,11 @@ winrt::fire_and_forget SoterFlutterBluePlugin::WriteValueAsync(BluetoothDeviceAg
   GattCommunicationStatus result;
 
   OutputDebugString(L"started trying to write");
+  if(characteristic.compare("8ec90002-f315-4f60-9fb8-838830daea50")==0) {
+            result = co_await gattCharacteristic.WriteValueAsync(
+                                        from_bytevc(value),
+                                        GattWriteOption::WriteWithoutResponse);
+   }
   if(bleOutputProperty == "withResponse") {
       result = co_await gattCharacteristic.WriteValueAsync(
                             from_bytevc(value),
