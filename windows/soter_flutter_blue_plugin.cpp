@@ -581,15 +581,11 @@ winrt::fire_and_forget SoterFlutterBluePlugin::SetNotifiableAsync(BluetoothDevic
   }
 
   // 8ec90002-f315-4f60-9fb8-838830daea50
-  if(characteristic.compare("8ec90002-f315-4f60-9fb8-838830daea50")==0) {
-          descriptorValue = GattClientCharacteristicConfigurationDescriptorValue::Indicate; // indication
-  }
-
-  OutputDebugString(L"RequestMtuAsync expectedMtu\n");
-  //if(service.compare("0000fe59-0000-1000-8000-00805f9b34fb")==0) {
-  //     descriptorValue = GattClientCharacteristicConfigurationDescriptorValue::Indicate; // indication
+  //if(characteristic.compare("8ec90002-f315-4f60-9fb8-838830daea50")==0) {
+  //        descriptorValue = GattClientCharacteristicConfigurationDescriptorValue::Indicate; // indication
   //}
 
+  OutputDebugString(L"RequestMtuAsync expectedMtu\n");
   //if(service.compare("0000fe59-0000-1000-8000-00805f9b34fb")==0) {
   //     descriptorValue = GattClientCharacteristicConfigurationDescriptorValue::Indicate; // indication
   //}
@@ -620,12 +616,7 @@ winrt::fire_and_forget SoterFlutterBluePlugin::WriteValueAsync(BluetoothDeviceAg
   auto gattCharacteristic = co_await bluetoothDeviceAgent.GetCharacteristicAsync(service, characteristic);
   GattCommunicationStatus result;
 
-  OutputDebugString(L"started trying to write");
-  if(characteristic.compare("8ec90002-f315-4f60-9fb8-838830daea50")==0) {
-            result = co_await gattCharacteristic.WriteValueAsync(
-                                        from_bytevc(value),
-                                        GattWriteOption::WriteWithoutResponse);
-   }
+  OutputDebugString(L"started trying to write\n");
   if(bleOutputProperty == "withResponse") {
       result = co_await gattCharacteristic.WriteValueAsync(
                             from_bytevc(value),
