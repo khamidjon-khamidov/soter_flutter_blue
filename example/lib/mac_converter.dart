@@ -2,7 +2,7 @@ extension ToMacExt on String {
   static final RegExp _numeric = RegExp(r'^-?[0-9]+$');
 
   String toMac() {
-    if (contains(':') || _numeric.hasMatch(this)) {
+    if (contains(':') || !_numeric.hasMatch(this)) {
       return this;
     }
 
