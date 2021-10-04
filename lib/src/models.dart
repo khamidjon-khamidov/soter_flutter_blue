@@ -37,6 +37,8 @@ class SoterBluetoothCharacteristic {
         _bluetoothCharacteristicFlutterBlue = characteristic,
         _value = BehaviorSubject.seeded(characteristic.lastValue);
 
+  String get deviceId => _deviceId ?? '';
+
   Guid get uuid {
     if (!Platform.isWindows) {
       return _bluetoothCharacteristicFlutterBlue!.uuid;
