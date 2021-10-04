@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:soter_flutter_blue/soter_flutter_blue.dart';
 import 'package:soter_flutter_blue_example/peripheral_detail_page.dart';
@@ -15,6 +17,8 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   final List<SoterBlueScanResult> _scanResults = [];
+  final StreamController<SoterBlueScanResult> _controller = StreamController();
+  Stream<SoterBlueScanResult> get resultStream => _controller.stream;
 
   @override
   void initState() {
@@ -37,7 +41,7 @@ class _MyAppState extends State<MyApp> {
             Column(
           children: [
             FutureBuilder(
-              future: SoterFlutterBlue.instance.isOn,
+              future: Future.value(true), //SoterFlutterBlue.instance.isOn,
               builder: (context, snapshot) {
                 var available = snapshot.data?.toString() ?? '...';
                 return Text('Bluetooth init: $available');
@@ -58,7 +62,11 @@ class _MyAppState extends State<MyApp> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: <Widget>[
-        ElevatedButton(child: const Text('startScan'), onPressed: () {}),
+        ElevatedButton(
+            child: const Text('startScan'),
+            onPressed: () {
+              _controller.addStream(startScan());
+            }),
         ElevatedButton(
           child: const Text('stopScan'),
           onPressed: () {
@@ -69,9 +77,13 @@ class _MyAppState extends State<MyApp> {
     );
   }
 
+  Stream<SoterBlueScanResult> startScan() {
+    return SoterFlutterBlue.instance.scan();
+  }
+
   Widget _buildListView() {
     return StreamBuilder(
-        stream: SoterFlutterBlue.instance.scan(),
+        stream: resultStream,
         builder: (BuildContext context,
             AsyncSnapshot<SoterBlueScanResult> snapshot) {
           if (snapshot.hasData) {

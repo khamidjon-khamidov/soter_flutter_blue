@@ -526,6 +526,9 @@ void SoterFlutterBluePlugin::DisconnectAllDevices(){
 
       // remove all connected device
       connectedDevices.clear();
+      message_connector_->Send(EncodableMap{
+         {"DisconnectionRequestState", true},
+      });
 }
 
 
