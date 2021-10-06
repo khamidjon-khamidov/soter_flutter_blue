@@ -41,7 +41,7 @@ class _MyAppState extends State<MyApp> {
             Column(
           children: [
             FutureBuilder(
-              future: Future.value(true), //SoterFlutterBlue.instance.isOn,
+              future: SoterFlutterBlue.instance.isOn,
               builder: (context, snapshot) {
                 var available = snapshot.data?.toString() ?? '...';
                 return Text('Bluetooth init: $available');

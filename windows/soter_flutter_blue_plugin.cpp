@@ -27,6 +27,8 @@
 #include <sstream>
 #include <algorithm>
 #include <iomanip>
+#include <chrono>
+#include <thread>
 
 #define GUID_FORMAT "%08x-%04hx-%04hx-%02hhx%02hhx-%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx"
 #define GUID_ARG(guid) guid.Data1, guid.Data2, guid.Data3, guid.Data4[0], guid.Data4[1], guid.Data4[2], guid.Data4[3], guid.Data4[4], guid.Data4[5], guid.Data4[6], guid.Data4[7]
@@ -40,7 +42,8 @@ using namespace winrt::Windows::Devices::Radios;
 using namespace winrt::Windows::Devices::Bluetooth;
 using namespace winrt::Windows::Devices::Bluetooth::Advertisement;
 using namespace winrt::Windows::Devices::Bluetooth::GenericAttributeProfile;
-
+using namespace std::this_thread; // sleep_for, sleep_until
+using namespace std::chrono;
 using namespace winrt::Windows::System;
 
 using flutter::EncodableValue;
@@ -142,6 +145,7 @@ class SoterFlutterBluePlugin : public flutter::Plugin, public flutter::StreamHan
   std::unique_ptr<flutter::StreamHandlerError<>> OnListenInternal(
       const EncodableValue* arguments,
       std::unique_ptr<flutter::EventSink<>>&& events) override;
+
   std::unique_ptr<flutter::StreamHandlerError<>> OnCancelInternal(
       const EncodableValue* arguments) override;
 
@@ -151,10 +155,10 @@ class SoterFlutterBluePlugin : public flutter::Plugin, public flutter::StreamHan
 
   Radio bluetoothRadio{ nullptr };
 
-  BluetoothLEAdvertisementWatcher bluetoothLEWatcher{ nullptr };
+  BluetoothLEAdvertisementWatcher bluetoothLEWatcher =  { nullptr }; // BluetoothLEAdvertisementWatcher();
   winrt::event_token bluetoothLEWatcherReceivedToken;
   void BluetoothLEWatcher_Received(BluetoothLEAdvertisementWatcher sender, BluetoothLEAdvertisementReceivedEventArgs args);
-
+  void OnAdvertisementStopped (BluetoothLEAdvertisementWatcher sender, BluetoothLEAdvertisementWatcherStoppedEventArgs  args);
   std::map<uint64_t, std::unique_ptr<BluetoothDeviceAgent>> connectedDevices{};
 
   winrt::fire_and_forget DiscoverServicesAsync(uint64_t bluetoothAddress, std::string deviceId);
@@ -229,17 +233,30 @@ void SoterFlutterBluePlugin::HandleMethodCall(
     std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result) {
 
     auto method_name = method_call.method_name();
-    OutputDebugString((L"HandleMethodCall " + winrt::to_hstring(method_name) + L"\n").c_str());
+    OutputDebugString((L"SoterFlutterBlue: HandleMethodCall " + winrt::to_hstring(method_name) + L"\n").c_str());
 
     if (method_name.compare("isBluetoothAvailable") == 0) {
       result->Success(EncodableValue(bluetoothRadio && bluetoothRadio.State() == RadioState::On));
     } else if (method_name.compare("startScan") == 0) {
+      OutputDebugString(L"SoterFlutterBlue: On Top of Scanning\n");
       if (!bluetoothLEWatcher) {
+        OutputDebugString(L"SoterFlutterBlue: Initializing bluetoothLEWatcher\n");
         bluetoothLEWatcher = BluetoothLEAdvertisementWatcher();
+
+        OutputDebugString(L"SoterFlutterBlue: Initialized bluetoothLEWatcher\n");
         bluetoothLEWatcherReceivedToken = bluetoothLEWatcher.Received({ this, &SoterFlutterBluePlugin::BluetoothLEWatcher_Received });
+        //bluetoothLEWatcher.Stopped({ this, &SoterFlutterBluePlugin::OnAdvertisementStopped });
+
+        OutputDebugString(L"SoterFlutterBlue: assigned received watcher\n");
       }
+
+      bluetoothLEWatcher.ScanningMode(BluetoothLEScanningMode::Active);
+      OutputDebugString(L"SoterFlutterBlue: starting scanning\n");
       bluetoothLEWatcher.Start();
+      OutputDebugString(L"SoterFlutterBlue: started\n");
+
       result->Success(nullptr);
+      OutputDebugString(L"SoterFlutterBlue: last line in start scan\n");
     } else if (method_name.compare("stopScan") == 0) {
       if (bluetoothLEWatcher) {
         bluetoothLEWatcher.Stop();
@@ -350,19 +367,38 @@ std::vector<uint8_t> parseManufacturerData(BluetoothLEAdvertisement advertisemen
   return result;
 }
 
+// todo in testing 06/10/2021
 void SoterFlutterBluePlugin::BluetoothLEWatcher_Received(
     BluetoothLEAdvertisementWatcher sender,
     BluetoothLEAdvertisementReceivedEventArgs args) {
+  OutputDebugString(L"SoterFlutterBlue: scanned something");
   OutputDebugString((L"Received " + winrt::to_hstring(args.BluetoothAddress()) + L"\n").c_str());
   auto manufacturer_data = parseManufacturerData(args.Advertisement());
-  if (scan_result_sink_) {
-    scan_result_sink_->Success(EncodableMap{
-      {"name", winrt::to_string(args.Advertisement().LocalName())},
-      {"deviceId", std::to_string(args.BluetoothAddress())},
-      {"manufacturerData", manufacturer_data},
-      {"rssi", args.RawSignalStrengthInDBm()},
-    });
+
+  if(message_connector_){
+        message_connector_->Send(EncodableMap{
+            {"scanResult", true},
+            {"name", winrt::to_string(args.Advertisement().LocalName())},
+            {"deviceId", std::to_string(args.BluetoothAddress())},
+            {"manufacturerData", manufacturer_data},
+            {"rssi", args.RawSignalStrengthInDBm()},
+        });
   }
+  //if (scan_result_sink_) {
+  //  scan_result_sink_->Success(EncodableMap{
+  //    {"name", winrt::to_string(args.Advertisement().LocalName())},
+  //    {"deviceId", std::to_string(args.BluetoothAddress())},
+  //    {"manufacturerData", manufacturer_data},
+  //    {"rssi", args.RawSignalStrengthInDBm()},
+  //  });
+  //}
+}
+
+void SoterFlutterBluePlugin::OnAdvertisementStopped (
+    BluetoothLEAdvertisementWatcher sender,
+    BluetoothLEAdvertisementWatcherStoppedEventArgs  args) {
+
+    bluetoothLEWatcher.Received(bluetoothLEWatcherReceivedToken);
 }
 
 std::unique_ptr<flutter::StreamHandlerError<EncodableValue>> SoterFlutterBluePlugin::OnListenInternal(

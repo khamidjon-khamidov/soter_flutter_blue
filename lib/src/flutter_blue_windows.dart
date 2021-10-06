@@ -98,22 +98,22 @@ class _FlutterBlueWindows extends SoterFlutterBlue {
       throw e;
     }
 
-    yield* _eventScanResult
-        .receiveBroadcastStream({'name': 'scanResult'})
+    yield* _messageStream
+        .where((m) => m['scanResult'] != null)
         .map((item) => SoterBlueScanResult.fromMap(item))
         .takeUntil(Rx.merge(killStreams))
         .doOnDone(stopScan)
         .map((result) {
-          final List<SoterBlueScanResult> list = _scanResults.value ?? [];
-          int index = list.indexOf(result);
-          if (index != -1) {
-            list[index] = result;
-          } else {
-            list.add(result);
-          }
-          _scanResults.add(list);
-          return result;
-        });
+      final List<SoterBlueScanResult> list = _scanResults.value ?? [];
+      int index = list.indexOf(result);
+      if (index != -1) {
+        list[index] = result;
+      } else {
+        list.add(result);
+      }
+      _scanResults.add(list);
+      return result;
+    });
   }
 
   @override
