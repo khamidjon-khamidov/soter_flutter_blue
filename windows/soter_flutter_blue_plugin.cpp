@@ -162,7 +162,6 @@ class SoterFlutterBluePlugin : public flutter::Plugin, public flutter::StreamHan
   std::map<uint64_t, std::unique_ptr<BluetoothDeviceAgent>> connectedDevices{};
 
   winrt::fire_and_forget DiscoverServicesAsync(uint64_t bluetoothAddress, std::string deviceId);
-  winrt::fire_and_forget StartScanAsync();
   winrt::fire_and_forget ConnectAsync(uint64_t bluetoothAddress);
   void BluetoothLEDevice_ConnectionStatusChanged(BluetoothLEDevice sender, IInspectable args);
   void CleanConnection(uint64_t bluetoothAddress);
@@ -390,15 +389,6 @@ std::unique_ptr<flutter::StreamHandlerError<EncodableValue>> SoterFlutterBluePlu
       scan_result_sink_ = nullptr;
   }
   return nullptr;
-}
-
-winrt::fire_and_forget SoterFlutterBluePlugin::StartScanAsync(){
-      if (!bluetoothLEWatcher) {
-        bluetoothLEWatcher = BluetoothLEAdvertisementWatcher();
-        bluetoothLEWatcherReceivedToken = bluetoothLEWatcher.Received({ this, &SoterFlutterBluePlugin::BluetoothLEWatcher_Received });
-      }
-      bluetoothLEWatcher.Start();
-      co_return;
 }
 
 winrt::fire_and_forget SoterFlutterBluePlugin::DiscoverServicesAsync(uint64_t bluetoothAddress, std::string deviceId) {
