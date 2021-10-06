@@ -154,13 +154,23 @@ class SoterBluetoothCharacteristic {
       return _bluetoothCharacteristicFlutterBlue!.setNotifyValue(notify);
     }
 
+    String notifyValue = notify
+        ? SoterBleInputProperty.notification.value
+        : SoterBleInputProperty.disabled.value;
+
+    // todo so DIRTY replace it with better code
+    if (_uuid.toString() == "8ec90003-f315-4f60-9fb8-838830daea50") {
+      notifyValue = SoterBleInputProperty.indication.value;
+    }
+    if (_uuid.toString() == "8ec90001-f315-4f60-9fb8-838830daea50") {
+      notifyValue = SoterBleInputProperty.notification.value;
+    }
+
     await _FlutterBlueWindows._method.invokeMethod('setNotifiable', {
       'deviceId': _deviceId.toString(),
       'service': _serviceUuid.toString(),
       'characteristic': _uuid.toString(),
-      'bleInputProperty': notify
-          ? SoterBleInputProperty.notification.value
-          : SoterBleInputProperty.disabled.value,
+      'bleInputProperty': notifyValue,
     });
     print('setNotifiable invokeMethod success');
 

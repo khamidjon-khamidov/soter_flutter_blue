@@ -543,15 +543,6 @@ winrt::fire_and_forget SoterFlutterBluePlugin::SetNotifiableAsync(BluetoothDevic
     : bleInputProperty == "indication" ? GattClientCharacteristicConfigurationDescriptorValue::Indicate
     : GattClientCharacteristicConfigurationDescriptorValue::None;
 
-  if(characteristic.compare("8ec90003-f315-4f60-9fb8-838830daea50")==0) {
-        descriptorValue = GattClientCharacteristicConfigurationDescriptorValue::Indicate; // indication
-  }
-
-  // send initial commands
-  if(characteristic.compare("8ec90001-f315-4f60-9fb8-838830daea50")==0) {
-        descriptorValue = GattClientCharacteristicConfigurationDescriptorValue::Notify; // notification
-  }
-
   auto writeDescriptorStatus = co_await gattCharacteristic.WriteClientCharacteristicConfigurationDescriptorAsync(descriptorValue);
   if (writeDescriptorStatus != GattCommunicationStatus::Success){
     message_connector_->Send(EncodableMap{
@@ -612,7 +603,6 @@ void SoterFlutterBluePlugin::GattCharacteristic_ValueChanged(GattCharacteristic 
     {"value", bytes},
   });
 };
-
 
 }  // namespace
 
