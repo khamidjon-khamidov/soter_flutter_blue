@@ -151,8 +151,6 @@ class SoterFlutterBluePlugin : public flutter::Plugin, public flutter::StreamHan
 
   std::unique_ptr<flutter::BasicMessageChannel<EncodableValue>> message_connector_;
 
-  std::unique_ptr<flutter::EventSink<EncodableValue>> scan_result_sink_;
-
   Radio bluetoothRadio{ nullptr };
 
   BluetoothLEAdvertisementWatcher bluetoothLEWatcher =  { nullptr }; // BluetoothLEAdvertisementWatcher();
@@ -344,7 +342,6 @@ std::vector<uint8_t> parseManufacturerData(BluetoothLEAdvertisement advertisemen
   return result;
 }
 
-// todo in testing 06/10/2021
 void SoterFlutterBluePlugin::BluetoothLEWatcher_Received(
     BluetoothLEAdvertisementWatcher sender,
     BluetoothLEAdvertisementReceivedEventArgs args) {
@@ -372,22 +369,14 @@ void SoterFlutterBluePlugin::OnAdvertisementStopped (
 std::unique_ptr<flutter::StreamHandlerError<EncodableValue>> SoterFlutterBluePlugin::OnListenInternal(
     const EncodableValue* arguments, std::unique_ptr<flutter::EventSink<EncodableValue>>&& events)
 {
-  auto args = std::get<EncodableMap>(*arguments);
-  auto name = std::get<std::string>(args[EncodableValue("name")]);
-  if (name.compare("scanResult") == 0) {
-    scan_result_sink_ = std::move(events);
-  }
+  // empty method
   return nullptr;
 }
 
 std::unique_ptr<flutter::StreamHandlerError<EncodableValue>> SoterFlutterBluePlugin::OnCancelInternal(
     const EncodableValue* arguments)
 {
-  auto args = std::get<EncodableMap>(*arguments);
-  auto name = std::get<std::string>(args[EncodableValue("name")]);
-  if (name.compare("scanResult") == 0) {
-      scan_result_sink_ = nullptr;
-  }
+  // empty method
   return nullptr;
 }
 
