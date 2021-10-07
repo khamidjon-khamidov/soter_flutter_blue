@@ -42,8 +42,6 @@ using namespace winrt::Windows::Devices::Radios;
 using namespace winrt::Windows::Devices::Bluetooth;
 using namespace winrt::Windows::Devices::Bluetooth::Advertisement;
 using namespace winrt::Windows::Devices::Bluetooth::GenericAttributeProfile;
-using namespace std::this_thread; // sleep_for, sleep_until
-using namespace std::chrono;
 using namespace winrt::Windows::System;
 
 using flutter::EncodableValue;
