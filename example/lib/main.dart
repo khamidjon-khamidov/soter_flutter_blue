@@ -18,6 +18,7 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   final List<SoterBlueScanResult> _scanResults = [];
   final StreamController<SoterBlueScanResult> _controller = StreamController();
+  String isBluetoothAvailable = 'false';
   Stream<SoterBlueScanResult> get resultStream => _controller.stream;
 
   @override
@@ -43,9 +44,16 @@ class _MyAppState extends State<MyApp> {
             FutureBuilder(
               future: SoterFlutterBlue.instance.isOn,
               builder: (context, snapshot) {
-                var available = snapshot.data?.toString() ?? '...';
-                return Text('Bluetooth init: $available');
+                isBluetoothAvailable = snapshot.data?.toString() ?? '...';
+                return Text('Bluetooth init: $isBluetoothAvailable');
               },
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                isBluetoothAvailable = (await SoterFlutterBlue.instance.isOn).toString();
+                setState(() {});
+              },
+              child: const Text('Check Availability'),
             ),
             _buildButtons(),
             const Divider(
@@ -64,13 +72,16 @@ class _MyAppState extends State<MyApp> {
       children: <Widget>[
         ElevatedButton(
             child: const Text('startScan'),
-            onPressed: () {
+            onPressed: () async {
+              isBluetoothAvailable = (await SoterFlutterBlue.instance.isOn).toString();
               _controller.addStream(startScan());
             }),
         ElevatedButton(
           child: const Text('stopScan'),
           onPressed: () {
+            _scanResults.clear();
             SoterFlutterBlue.instance.stopScan();
+            setState(() {});
           },
         ),
       ],
@@ -84,12 +95,10 @@ class _MyAppState extends State<MyApp> {
   Widget _buildListView() {
     return StreamBuilder(
         stream: resultStream,
-        builder: (BuildContext context,
-            AsyncSnapshot<SoterBlueScanResult> snapshot) {
+        builder: (BuildContext context, AsyncSnapshot<SoterBlueScanResult> snapshot) {
           if (snapshot.hasData) {
             var result = snapshot.data!;
-            if (!_scanResults.any((element) =>
-                element.device.deviceId == result.device.deviceId)) {
+            if (!_scanResults.any((element) => element.device.deviceId == result.device.deviceId)) {
               _scanResults.add(result);
             }
           }
@@ -103,8 +112,7 @@ class _MyAppState extends State<MyApp> {
                   Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) =>
-                            PeripheralDetailPage(_scanResults[index].device),
+                        builder: (context) => PeripheralDetailPage(_scanResults[index].device),
                       ));
                 },
               ),

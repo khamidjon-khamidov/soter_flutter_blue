@@ -150,7 +150,7 @@ class SoterFlutterBluePlugin : public flutter::Plugin, public flutter::StreamHan
 
   Radio bluetoothRadio{ nullptr };
 
-  BluetoothLEAdvertisementWatcher bluetoothLEWatcher =  { nullptr }; // BluetoothLEAdvertisementWatcher();
+  BluetoothLEAdvertisementWatcher bluetoothLEWatcher =  { nullptr };
   winrt::event_token bluetoothLEWatcherReceivedToken;
   void BluetoothLEWatcher_Received(BluetoothLEAdvertisementWatcher sender, BluetoothLEAdvertisementReceivedEventArgs args);
   void OnAdvertisementStopped (BluetoothLEAdvertisementWatcher sender, BluetoothLEAdvertisementWatcherStoppedEventArgs  args);
@@ -232,13 +232,23 @@ void SoterFlutterBluePlugin::HandleMethodCall(
     if (method_name.compare("isBluetoothAvailable") == 0) {
       result->Success(EncodableValue(bluetoothRadio && bluetoothRadio.State() == RadioState::On));
     } else if (method_name.compare("startScan") == 0) {
-      if (!bluetoothLEWatcher) {
-        bluetoothLEWatcher = BluetoothLEAdvertisementWatcher();
-        bluetoothLEWatcherReceivedToken = bluetoothLEWatcher.Received({ this, &SoterFlutterBluePlugin::BluetoothLEWatcher_Received });
-      }
+      try {
+          if (!bluetoothLEWatcher) {
+             bluetoothLEWatcher = BluetoothLEAdvertisementWatcher();
+             bluetoothLEWatcherReceivedToken = bluetoothLEWatcher.Received({ this, &SoterFlutterBluePlugin::BluetoothLEWatcher_Received });
+          }
 
-      bluetoothLEWatcher.ScanningMode(BluetoothLEScanningMode::Active);
-      bluetoothLEWatcher.Start();
+          bluetoothLEWatcher.ScanningMode(BluetoothLEScanningMode::Active);
+          bluetoothLEWatcher.Start();
+      } catch(...){
+           // if any error stop scan
+           if (bluetoothLEWatcher) {
+              bluetoothLEWatcher.Stop();
+              bluetoothLEWatcher.Received(bluetoothLEWatcherReceivedToken);
+           }
+           bluetoothLEWatcher = nullptr;
+           OutputDebugString(L"SoterFlutterBlue: some error happened \n");
+      }
 
       result->Success(nullptr);
     } else if (method_name.compare("stopScan") == 0) {
